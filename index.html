@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TWC Content Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   TWC CONTENT STUDIO — Real Application UI
+   With: Three.js particles, fluid blobs, 3D tilt cards, spring
+         transitions, glow borders, micro-animations
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Design Tokens ────────────────────────────────────────────────── */
+:root {
+  --bg: #09090b;
+  --bg-sidebar: #0c0c0f;
+  --bg-surface: #111114;
+  --bg-card: #16161a;
+  --bg-card-h: #1c1c21;
+  --bg-input: #1a1a1f;
+  --bg-hover: rgba(255,255,255,0.03);
+  --bg-active: rgba(232,34,122,0.08);
+  --b: rgba(255,255,255,0.06);
+  --b2: rgba(255,255,255,0.10);
+  --bf: rgba(232,34,122,0.5);
+  --t1: #fafafa;
+  --t2: #a1a1aa;
+  --t3: #71717a;
+  --t4: #3f3f46;
+  --accent: #e8227a;
+  --accent-d: rgba(232,34,122,0.12);
+  --purple: #8b5cf6;
+  --purple-d: rgba(139,92,246,0.12);
+  --blue: #3b82f6;
+  --blue-d: rgba(59,130,246,0.12);
+  --green: #10b981;
+  --green-d: rgba(16,185,129,0.12);
+  --yellow: #f59e0b;
+  --yellow-d: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-d: rgba(239,68,68,0.12);
+  --orange: #f97316;
+  --glow-1: #ff96a9; --glow-2: #e8b4f0; --glow-3: #ffb3c6; --glow-4: #d44d8a;
+  --font: 'Inter', -apple-system, sans-serif;
+  --sidebar-w: 248px;
+  --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px;
+  --spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease: cubic-bezier(0.22,1,0.36,1);
+}
+
+/* ── Reset ────────────────────────────────────────────────────────── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-size:14px}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);overflow:hidden;height:100vh}
+a{color:inherit;text-decoration:none}
+button{border:none;background:none;cursor:pointer;font-family:inherit;color:inherit;font-size:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;color:inherit;background:var(--bg-input);border:1px solid var(--b);border-radius:var(--r-md);padding:8px 12px;outline:none;transition:border-color .2s}
+input:focus,textarea:focus{border-color:var(--bf)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.07);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
+
+/* ── App Shell ────────────────────────────────────────────────────── */
+.app{display:flex;height:100vh}
+
+/* ── Sidebar ──────────────────────────────────────────────────────── */
+.sidebar{width:var(--sidebar-w);flex:none;background:var(--bg-sidebar);border-right:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:10}
+.sb-head{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--b)}
+.sb-logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#8c0f60,#e8227a);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex:none;position:relative;overflow:hidden}
+/* Rotating glow border from blob-card */
+.sb-logo::before{content:'';position:absolute;inset:-2px;border-radius:10px;background:conic-gradient(from var(--glow-angle,0deg),var(--glow-1),var(--glow-2),var(--glow-3),var(--glow-4),var(--glow-1));animation:glowSpin 4s linear infinite;z-index:-1;opacity:0.7}
+@keyframes glowSpin{to{--glow-angle:360deg}}
+@property --glow-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+.sb-brand{font-size:13px;font-weight:600}.sb-brand small{display:block;font-size:11px;font-weight:400;color:var(--t3)}
+.sb-nav{flex:1;overflow-y:auto;padding:8px}
+.sb-sec{padding:12px 8px 4px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t4)}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);font-size:13px;font-weight:500;color:var(--t3);cursor:pointer;transition:all .2s var(--ease);position:relative;transform:translateX(0)}
+.sb-item:hover{background:var(--bg-hover);color:var(--t2);transform:translateX(2px)}
+.sb-item.active{background:var(--bg-active);color:var(--t1);transform:translateX(0)}
+.sb-item.active::before{content:'';position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:0 3px 3px 0;background:var(--accent);animation:slideIn .3s var(--spring)}
+@keyframes slideIn{from{height:0;opacity:0}to{height:16px;opacity:1}}
+.sb-item svg{width:16px;height:16px;flex:none;opacity:.55;transition:opacity .2s}
+.sb-item.active svg{opacity:1}
+.sb-badge{margin-left:auto;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:var(--accent-d);color:var(--accent);animation:badgePulse 2s ease infinite}
+@keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.sb-channels{padding:0 8px 8px}
+.sb-ch{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r-md);font-size:12px;color:var(--t3);cursor:pointer;transition:all .2s}
+.sb-ch:hover{background:var(--bg-hover);color:var(--t2);transform:translateX(2px)}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex:none;transition:transform .3s var(--spring)}
+.sb-ch:hover .sb-dot{transform:scale(1.4)}
+.sb-user{padding:12px 16px;border-top:1px solid var(--b);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .2s}
+.sb-user:hover{background:var(--bg-hover)}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none}
+.sb-user-info{font-size:12px}.sb-user-info span{display:block;color:var(--t3);font-size:11px}
+
+/* ── Main Area ────────────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+
+/* Three.js canvas sits behind main content */
+.particles-bg{position:absolute;top:0;right:0;width:50%;height:300px;z-index:0;opacity:0.15;pointer-events:none;mask-image:linear-gradient(to bottom,black 0%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,black 0%,transparent 100%)}
+.particles-bg canvas{width:100%;height:100%;display:block}
+
+/* ── Topbar ───────────────────────────────────────────────────────── */
+.topbar{height:54px;flex:none;border-bottom:1px solid var(--b);display:flex;align-items:center;padding:0 24px;gap:16px;background:rgba(9,9,11,0.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:5;position:relative}
+.tb-crumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--t3)}
+.tb-crumb strong{color:var(--t1);font-weight:600}
+.tb-crumb svg{width:14px;height:14px;opacity:.4}
+.tb-spacer{flex:1}
+.tb-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-input);border:1px solid var(--b);border-radius:var(--r-md);font-size:12px;color:var(--t3);min-width:220px;cursor:text;transition:border-color .2s,box-shadow .2s}
+.tb-search:hover{border-color:var(--b2)}
+.tb-search:focus-within{border-color:var(--bf);box-shadow:0 0 0 3px rgba(232,34,122,0.1)}
+.tb-search svg{width:14px;height:14px;opacity:.4}
+.tb-search kbd{margin-left:auto;font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,0.05);border:1px solid var(--b);font-family:inherit}
+.tb-icon{width:34px;height:34px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;transition:all .2s;position:relative}
+.tb-icon:hover{background:var(--bg-hover);transform:scale(1.05)}
+.tb-icon:active{transform:scale(0.95)}
+.tb-icon svg{width:18px;height:18px;color:var(--t3)}
+.tb-notif{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.8)}}
+.tb-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-md);font-size:12px;font-weight:600;background:linear-gradient(135deg,#8c0f60,#e8227a);color:#fff;transition:all .2s var(--spring);position:relative;overflow:hidden}
+.tb-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(232,34,122,0.35)}
+.tb-btn:active{transform:translateY(0) scale(0.97)}
+/* Glow sweep animation from blob-card */
+.tb-btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 30%,rgba(255,255,255,0.12) 50%,transparent 70%);animation:btnSweep 3s ease infinite}
+@keyframes btnSweep{0%{transform:translateX(-100%) rotate(45deg)}100%{transform:translateX(100%) rotate(45deg)}}
+
+/* ── Content ──────────────────────────────────────────────────────── */
+.content{flex:1;overflow-y:auto;padding:24px;position:relative;z-index:2;scroll-behavior:smooth}
+
+/* ── View Switching (spring transition from motion-nav) ───────────── */
+.view{display:none;opacity:0;transform:translateY(12px)}
+.view.active{display:block;animation:viewEnter .45s var(--ease) forwards}
+@keyframes viewEnter{to{opacity:1;transform:translateY(0)}}
+
+/* ── Tilt Card System (from tilt-card.tsx) ─────────────────────────── */
+.tilt-card{transition:transform .4s var(--ease),box-shadow .4s;transform-style:preserve-3d;will-change:transform}
+.tilt-card:hover{box-shadow:0 20px 40px rgba(0,0,0,0.3)}
+
+/* ── Fluid Blob Background (from blob-card.tsx) ───────────────────── */
+.blob-bg{position:absolute;inset:0;overflow:hidden;border-radius:inherit;z-index:0;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(50px);opacity:0.4;animation:blobFloat 8s ease-in-out infinite alternate}
+.blob:nth-child(2){animation-delay:-2s;animation-duration:10s}
+.blob:nth-child(3){animation-delay:-4s;animation-duration:12s}
+.blob:nth-child(4){animation-delay:-6s;animation-duration:9s}
+@keyframes blobFloat{0%{transform:translate(0,0) scale(1)}33%{transform:translate(15px,-20px) scale(1.1)}66%{transform:translate(-10px,15px) scale(0.9)}100%{transform:translate(5px,-10px) scale(1.05)}}
+
+/* ── Glow Border (from blob-card.tsx) ──────────────────────────────── */
+.glow-border{position:relative}
+.glow-border::before{content:'';position:absolute;inset:-1.5px;border-radius:inherit;background:conic-gradient(from var(--glow-angle,0deg),var(--glow-1),var(--glow-2),var(--glow-3),var(--glow-4),var(--glow-1));opacity:0;transition:opacity .4s;z-index:-1;animation:glowSpin 5s linear infinite}
+.glow-border:hover::before{opacity:0.6}
+
+/* ── Dashboard ────────────────────────────────────────────────────── */
+.dash-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.dash-head h1{font-size:22px;font-weight:700;margin-bottom:2px}
+.dash-head p{font-size:13px;color:var(--t3)}
+.period{display:flex;gap:4px}
+.period button{padding:6px 12px;border-radius:var(--r-md);font-size:12px;font-weight:500;color:var(--t3);transition:all .2s var(--spring)}
+.period button.active{background:var(--bg-card);color:var(--t1);border:1px solid var(--b);transform:scale(1.02)}
+.period button:hover:not(.active){color:var(--t2)}
+.period button:active{transform:scale(0.95)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{padding:20px;border-radius:var(--r-lg);background:var(--bg-surface);border:1px solid var(--b);transition:all .3s var(--ease);position:relative;overflow:hidden}
+.stat:hover{border-color:var(--b2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.2)}
+.stat-label{font-size:12px;color:var(--t3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.stat-label svg{width:14px;height:14px}
+.stat-val{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.stat-change{font-size:11px;display:flex;align-items:center;gap:4px}
+.stat-change.up{color:var(--green)}.stat-change.down{color:var(--red)}
+.stat-bar{height:4px;border-radius:2px;background:var(--bg-card);margin-top:10px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width 1.2s var(--ease);width:0}
+/* Animated blob inside stat card */
+.stat .blob-bg .blob{opacity:0.08;filter:blur(40px)}
+
+.dash-grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+.card{background:var(--bg-surface);border:1px solid var(--b);border-radius:var(--r-lg);overflow:hidden;transition:border-color .3s}
+.card:hover{border-color:var(--b2)}
+.card-h{padding:16px 20px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between}
+.card-h h3{font-size:13px;font-weight:600}
+.card-h-a{font-size:11px;color:var(--t3);cursor:pointer;transition:all .2s}
+.card-h-a:hover{color:var(--accent);transform:translateX(2px)}
+.card-b{padding:16px 20px}
+
+/* Activity feed with slide-in animations */
+.act{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03);opacity:0;animation:actSlide .5s var(--ease) forwards}
+.act:nth-child(1){animation-delay:.05s}.act:nth-child(2){animation-delay:.1s}.act:nth-child(3){animation-delay:.15s}.act:nth-child(4){animation-delay:.2s}.act:nth-child(5){animation-delay:.25s}
+@keyframes actSlide{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.act:last-child{border:none}
+.act-dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:5px;animation:dotPop .4s var(--spring)}
+@keyframes dotPop{from{transform:scale(0)}to{transform:scale(1)}}
+.act-text{font-size:12px;color:var(--t2);line-height:1.5}
+.act-text strong{color:var(--t1);font-weight:500}
+.act-time{font-size:10px;color:var(--t4);margin-top:2px}
+
+/* Mini chart with animated bars */
+.chart{display:flex;align-items:flex-end;gap:4px;height:80px;padding:12px 0}
+.chart-bar{flex:1;border-radius:3px 3px 0 0;min-height:4px;transition:height 1s var(--ease);animation:barGrow 1s var(--ease) forwards;transform-origin:bottom}
+@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.chart-bar:nth-child(1){animation-delay:.05s}.chart-bar:nth-child(2){animation-delay:.1s}.chart-bar:nth-child(3){animation-delay:.15s}
+.chart-bar:nth-child(4){animation-delay:.2s}.chart-bar:nth-child(5){animation-delay:.25s}.chart-bar:nth-child(6){animation-delay:.3s}.chart-bar:nth-child(7){animation-delay:.35s}
+
+/* Quota rows with progress animation */
+.quota{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.quota:last-child{border:none}
+.q-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex:none;transition:transform .3s var(--spring)}
+.quota:hover .q-av{transform:scale(1.15)}
+.q-info{flex:1}
+.q-name{font-size:12px;font-weight:500;margin-bottom:2px}
+.q-detail{font-size:11px;color:var(--t3)}
+.q-bar{height:4px;border-radius:2px;background:var(--bg-card);margin-top:4px;overflow:hidden}
+.q-bar-fill{height:100%;border-radius:2px;transition:width 1.2s var(--ease);width:0}
+.q-count{font-size:12px;font-weight:600;flex:none}
+.perf-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.03);transition:background .2s}
+.perf-row:hover{background:rgba(255,255,255,0.01)}
+.perf-row:last-child{border:none}
+
+/* ── Pipeline / Kanban ────────────────────────────────────────────── */
+.pipe-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.pipe-head h2{font-size:18px;font-weight:700}
+.pipe-filters{display:flex;gap:8px}
+.filter{padding:6px 12px;border-radius:var(--r-md);font-size:12px;font-weight:500;color:var(--t3);border:1px solid var(--b);transition:all .2s var(--spring)}
+.filter:hover{color:var(--t2);border-color:var(--b2);transform:translateY(-1px)}
+.filter.active{background:var(--accent-d);color:var(--accent);border-color:rgba(232,34,122,0.2);transform:scale(1.02)}
+.filter:active{transform:scale(0.95)}
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(230px,1fr));gap:12px;overflow-x:auto;padding-bottom:16px;min-height:calc(100vh - 180px)}
+.k-col{background:var(--bg-surface);border-radius:var(--r-lg);border:1px solid var(--b);display:flex;flex-direction:column;min-height:300px}
+.k-col-h{padding:14px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:var(--t2)}
+.k-col-cnt{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600}
+.k-col-b{padding:8px;flex:1;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.k-card{padding:14px;border-radius:var(--r-md);background:var(--bg-card);border:1px solid var(--b);cursor:pointer;transition:all .25s var(--ease);position:relative}
+.k-card:hover{border-color:var(--b2);background:var(--bg-card-h);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.25)}
+.k-card:active{transform:translateY(0) scale(0.98)}
+.k-title{font-size:13px;font-weight:500;margin-bottom:8px;line-height:1.4}
+.k-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.k-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
+.k-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.03)}
+.k-assignee{width:22px;height:22px;border-radius:50%;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:transform .3s var(--spring)}
+.k-card:hover .k-assignee{transform:scale(1.15)}
+.k-date{font-size:10px;color:var(--t4)}
+.k-prio{width:6px;height:6px;border-radius:50%;position:absolute;top:14px;right:14px}
+
+/* ── Scripts View ─────────────────────────────────────────────────── */
+.scripts{display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:calc(100vh - 160px)}
+.sc-list{background:var(--bg-surface);border:1px solid var(--b);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
+.sc-list-h{padding:14px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between}
+.sc-list-h h3{font-size:13px;font-weight:600}
+.sc-list-b{flex:1;overflow-y:auto;padding:8px}
+.sc-item{padding:12px;border-radius:var(--r-md);cursor:pointer;transition:all .2s var(--ease);border:1px solid transparent;margin-bottom:4px}
+.sc-item:hover{background:var(--bg-hover);transform:translateX(3px)}
+.sc-item.active{background:var(--bg-active);border-color:rgba(232,34,122,0.15);transform:translateX(0)}
+.sc-item-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.sc-item-meta{font-size:11px;color:var(--t3);display:flex;gap:8px;align-items:center}
+.sc-item-status{padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600}
+.sc-editor{background:var(--bg-surface);border:1px solid var(--b);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
+.ed-toolbar{padding:12px 20px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:12px}
+.ed-tb-btn{padding:5px 10px;border-radius:var(--r-sm);font-size:11px;font-weight:500;color:var(--t3);transition:all .2s var(--spring)}
+.ed-tb-btn:hover{background:var(--bg-hover);color:var(--t2);transform:translateY(-1px)}
+.ed-tb-btn:active{transform:translateY(0) scale(0.95)}
+.ed-tb-btn.active{background:var(--accent-d);color:var(--accent)}
+.ed-tb-div{width:1px;height:20px;background:var(--b)}
+.ed-body{flex:1;padding:24px 28px;overflow-y:auto}
+.ed-title{font-size:20px;font-weight:700;margin-bottom:4px;outline:none}
+.ed-version{font-size:11px;color:var(--t3);margin-bottom:20px}
+.ed-scene{padding:16px;border-radius:var(--r-md);border:1px solid var(--b);margin-bottom:12px;transition:all .3s var(--ease);position:relative;overflow:hidden}
+.ed-scene:hover{border-color:var(--b2);transform:translateX(3px)}
+/* Subtle blob in scene card header area */
+.ed-scene::before{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;background:var(--accent);filter:blur(60px);opacity:0;transition:opacity .4s}
+.ed-scene:hover::before{opacity:0.04}
+.ed-scene-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ed-scene-num{font-size:11px;font-weight:600;color:var(--accent)}
+.ed-scene-dur{font-size:11px;color:var(--t3)}
+.ed-scene-row{margin-bottom:8px}
+.ed-scene-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--t4);margin-bottom:3px}
+.ed-scene-txt{font-size:13px;color:var(--t2);line-height:1.6}
+
+/* ── Video Project ────────────────────────────────────────────────── */
+.proj-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.proj-head h2{font-size:22px;font-weight:700;margin-bottom:4px}
+.proj-head p{font-size:13px;color:var(--t3)}
+.proj-steps{display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap}
+.proj-step{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r-md);font-size:11px;font-weight:500;color:var(--t3);background:var(--bg-surface);border:1px solid var(--b);transition:all .3s var(--ease)}
+.proj-step.done{color:var(--green);border-color:rgba(16,185,129,0.15);background:var(--green-d)}
+.proj-step.now{color:var(--accent);border-color:rgba(232,34,122,0.2);background:var(--accent-d);animation:stepPulse 2s ease infinite}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,34,122,0.15)}50%{box-shadow:0 0 0 6px rgba(232,34,122,0)}}
+.proj-step svg{width:12px;height:12px}
+.proj-grid{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.scenes-list{display:flex;flex-direction:column;gap:10px}
+.scene-card{padding:16px 20px;border-radius:var(--r-lg);background:var(--bg-surface);border:1px solid var(--b);display:grid;grid-template-columns:40px 1fr auto;gap:16px;align-items:start;transition:all .3s var(--ease)}
+.scene-card:hover{border-color:var(--b2);transform:translateX(4px)}
+.scene-num{width:36px;height:36px;border-radius:50%;background:var(--accent-d);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none;transition:transform .3s var(--spring)}
+.scene-card:hover .scene-num{transform:scale(1.1) rotate(5deg)}
+.scene-info h4{font-size:13px;font-weight:600;margin-bottom:4px}
+.scene-info p{font-size:12px;color:var(--t3);line-height:1.5}
+.scene-status{font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.side-panel{display:flex;flex-direction:column;gap:12px}
+.side-card{background:var(--bg-surface);border:1px solid var(--b);border-radius:var(--r-lg);transition:border-color .3s}
+.side-card:hover{border-color:var(--b2)}
+.side-card-h{padding:14px 16px;border-bottom:1px solid var(--b);font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.side-card-b{padding:14px 16px}
+.side-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px}
+.side-row-l{color:var(--t3)}.side-row-v{font-weight:500}
+.seo-ring{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;margin:0 auto 10px;position:relative}
+.seo-ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:3px solid currentColor;opacity:0.15;animation:ringPulse 2s ease infinite}
+@keyframes ringPulse{0%,100%{transform:scale(1);opacity:0.15}50%{transform:scale(1.08);opacity:0.05}}
+.seo-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.seo-row:last-child{border:none}
+.pol-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+.pol-badge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;flex:none;transition:transform .2s var(--spring)}
+.pol-row:hover .pol-badge{transform:scale(1.05)}
+
+/* ── Channels ─────────────────────────────────────────────────────── */
+.ch-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.ch-head h2{font-size:18px;font-weight:700}
+.ch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.ch-card{padding:24px;border-radius:var(--r-xl);background:var(--bg-surface);border:1px solid var(--b);transition:all .3s var(--ease);cursor:pointer;position:relative;overflow:hidden}
+.ch-card:hover{border-color:var(--b2);transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.25)}
+/* Blob bg inside channel cards */
+.ch-card .blob-bg .blob{opacity:0.04;transition:opacity .4s}
+.ch-card:hover .blob-bg .blob{opacity:0.08}
+.ch-card-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;position:relative;z-index:1}
+.ch-icon{width:40px;height:40px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.ch-card-top h3{font-size:15px;font-weight:600}
+.ch-card-top p{font-size:11px;color:var(--t3)}
+.ch-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;position:relative;z-index:1}
+.ch-stat{text-align:center}
+.ch-stat-v{font-size:18px;font-weight:700}
+.ch-stat-l{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+.ch-platforms{display:flex;gap:6px;margin-top:14px;padding-top:14px;border-top:1px solid var(--b);position:relative;z-index:1}
+.plat-tag{font-size:10px;font-weight:500;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,0.04);color:var(--t3);transition:all .2s}
+.plat-tag:hover{background:rgba(255,255,255,0.06);color:var(--t2)}
+.ch-card-add{border-style:dashed;display:flex;align-items:center;justify-content:center;min-height:200px;flex-direction:column;gap:8px;transition:all .3s var(--ease)}
+.ch-card-add:hover{border-color:var(--accent);background:var(--accent-d)}
+.ch-card-add span:first-child{font-size:28px;opacity:.3;transition:all .3s var(--spring)}
+.ch-card-add:hover span:first-child{opacity:.7;transform:scale(1.2) rotate(90deg)}
+</style>
+</head>
+<body>
+
+<div class="app">
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="sb-logo">T</div>
+    <div class="sb-brand">TWC Studio<small>Content Control Center</small></div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Main</div>
+    <div class="sb-item active" onclick="go('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="sb-item" onclick="go('pipeline',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg>
+      Pipeline<span class="sb-badge">8</span>
+    </div>
+    <div class="sb-item" onclick="go('scripts',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Scripts<span class="sb-badge">3</span>
+    </div>
+    <div class="sb-item" onclick="go('project',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      Video Projects
+    </div>
+    <div class="sb-item" onclick="go('channels',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+      Channels
+    </div>
+    <div class="sb-sec">Workspace</div>
+    <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</div>
+    <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Drive</div>
+    <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Policy Rules</div>
+    <div class="sb-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>Audit Log</div>
+    <div class="sb-sec">Channels</div>
+    <div class="sb-channels">
+      <div class="sb-ch"><span class="sb-dot" style="background:var(--accent)"></span>Car Fusion</div>
+      <div class="sb-ch"><span class="sb-dot" style="background:var(--purple)"></span>AI Tools Daily</div>
+      <div class="sb-ch"><span class="sb-dot" style="background:var(--blue)"></span>History Unveiled</div>
+      <div class="sb-ch"><span class="sb-dot" style="background:var(--green)"></span>Money Minute</div>
+      <div class="sb-ch"><span class="sb-dot" style="background:var(--orange)"></span>Niwali Wellness</div>
+    </div>
+  </nav>
+  <div class="sb-user">
+    <div class="sb-avatar">AK</div>
+    <div class="sb-user-info">Amir Khan<span>Owner</span></div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+  <!-- Three.js particles behind content -->
+  <div class="particles-bg" id="particles-bg"></div>
+
+  <div class="topbar">
+    <div class="tb-crumb"><span>TWC Studio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><strong id="tb-title">Dashboard</strong></div>
+    <div class="tb-spacer"></div>
+    <div class="tb-search" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search videos, scripts…<kbd>⌘K</kbd></div>
+    <button class="tb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="tb-notif"></span></button>
+    <button class="tb-btn">+ New Video</button>
+  </div>
+
+  <div class="content" id="content">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div class="view active" id="v-dashboard">
+    <div class="dash-head">
+      <div><h1>Good evening, Amir</h1><p>Here's what's happening across your channels today.</p></div>
+      <div class="period"><button class="active">Today</button><button>Week</button><button>Month</button></div>
+    </div>
+    <div class="stats">
+      <div class="stat tilt-card">
+        <div class="blob-bg"><div class="blob" style="width:120px;height:120px;background:#e8227a;top:-20px;right:-20px"></div></div>
+        <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Videos Produced</div>
+        <div class="stat-val">12</div><div class="stat-change up">↑ 33% from yesterday</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-w="75" style="background:var(--accent)"></div></div>
+      </div>
+      <div class="stat tilt-card">
+        <div class="blob-bg"><div class="blob" style="width:120px;height:120px;background:#10b981;top:-20px;right:-20px"></div></div>
+        <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Published Today</div>
+        <div class="stat-val">6</div><div class="stat-change up">↑ 2 from yesterday</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-w="60" style="background:var(--green)"></div></div>
+      </div>
+      <div class="stat tilt-card">
+        <div class="blob-bg"><div class="blob" style="width:120px;height:120px;background:#10b981;top:-20px;right:-20px"></div></div>
+        <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Policy Score</div>
+        <div class="stat-val" style="color:var(--green)">98</div><div class="stat-change up">All clear</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-w="98" style="background:var(--green)"></div></div>
+      </div>
+      <div class="stat tilt-card">
+        <div class="blob-bg"><div class="blob" style="width:120px;height:120px;background:#f59e0b;top:-20px;right:-20px"></div></div>
+        <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Avg Turnaround</div>
+        <div class="stat-val">4.2h</div><div class="stat-change down">↓ 18 min slower</div>
+        <div class="stat-bar"><div class="stat-bar-fill" data-w="55" style="background:var(--yellow)"></div></div>
+      </div>
+    </div>
+    <div class="dash-grid">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="card-h"><h3>Production Output — This Week</h3><span class="card-h-a">View all →</span></div><div class="card-b">
+          <div class="chart"><div class="chart-bar" style="height:30%;background:var(--accent-d)"></div><div class="chart-bar" style="height:55%;background:var(--accent-d)"></div><div class="chart-bar" style="height:45%;background:var(--accent-d)"></div><div class="chart-bar" style="height:70%;background:var(--accent-d)"></div><div class="chart-bar" style="height:85%;background:var(--accent-d)"></div><div class="chart-bar" style="height:60%;background:var(--accent-d)"></div><div class="chart-bar" style="height:95%;background:var(--accent)"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t4);padding-top:4px"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span style="color:var(--accent)">Today</span></div>
+        </div></div>
+        <div class="card"><div class="card-h"><h3>Recent Activity</h3><span class="card-h-a">View all →</span></div><div class="card-b">
+          <div class="act"><span class="act-dot" style="background:var(--green)"></span><div><div class="act-text"><strong>10 Facts About Space</strong> script approved by <strong>Amir</strong></div><div class="act-time">2 minutes ago</div></div></div>
+          <div class="act"><span class="act-dot" style="background:var(--blue)"></span><div><div class="act-text"><strong>Car Fusion: Supercars Top 5</strong> — 3/5 Flow clips uploaded</div><div class="act-time">14 minutes ago</div></div></div>
+          <div class="act"><span class="act-dot" style="background:var(--accent)"></span><div><div class="act-text"><strong>Motivation: Start Now</strong> published to YouTube Shorts</div><div class="act-time">1 hour ago</div></div></div>
+          <div class="act"><span class="act-dot" style="background:var(--yellow)"></span><div><div class="act-text"><strong>Herbal Wellness #3</strong> — Policy WARN: health claim language</div><div class="act-time">2 hours ago</div></div></div>
+          <div class="act"><span class="act-dot" style="background:var(--purple)"></span><div><div class="act-text"><strong>Sarah M.</strong> completed 2/2 daily quota for AI Tools Daily</div><div class="act-time">3 hours ago</div></div></div>
+        </div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="card-h"><h3>Team Quotas — Today</h3></div><div class="card-b">
+          <div class="quota"><div class="q-av" style="background:linear-gradient(135deg,var(--accent),var(--purple))">SM</div><div class="q-info"><div class="q-name">Sarah M.</div><div class="q-detail">AI Tools Daily</div><div class="q-bar"><div class="q-bar-fill" data-w="100" style="background:var(--green)"></div></div></div><div class="q-count" style="color:var(--green)">2/2</div></div>
+          <div class="quota"><div class="q-av" style="background:linear-gradient(135deg,var(--blue),var(--purple))">JA</div><div class="q-info"><div class="q-name">John A.</div><div class="q-detail">Car Fusion, History</div><div class="q-bar"><div class="q-bar-fill" data-w="50" style="background:var(--yellow)"></div></div></div><div class="q-count" style="color:var(--yellow)">1/2</div></div>
+          <div class="quota"><div class="q-av" style="background:linear-gradient(135deg,var(--green),var(--blue))">LR</div><div class="q-info"><div class="q-name">Lina R.</div><div class="q-detail">Money Minute</div><div class="q-bar"><div class="q-bar-fill" data-w="33" style="background:var(--red)"></div></div></div><div class="q-count" style="color:var(--red)">0/1</div></div>
+          <div class="quota"><div class="q-av" style="background:linear-gradient(135deg,var(--orange),var(--accent))">FK</div><div class="q-info"><div class="q-name">Faisal K.</div><div class="q-detail">Niwali Wellness</div><div class="q-bar"><div class="q-bar-fill" data-w="100" style="background:var(--green)"></div></div></div><div class="q-count" style="color:var(--green)">1/1</div></div>
+        </div></div>
+        <div class="card"><div class="card-h"><h3>Channel Performance</h3></div><div class="card-b">
+          <div class="perf-row"><span style="color:var(--t3)">Car Fusion</span><span style="font-weight:600;color:var(--green)">↑ 12.4K</span></div>
+          <div class="perf-row"><span style="color:var(--t3)">AI Tools Daily</span><span style="font-weight:600;color:var(--green)">↑ 8.7K</span></div>
+          <div class="perf-row"><span style="color:var(--t3)">History Unveiled</span><span style="font-weight:600;color:var(--yellow)">→ 3.1K</span></div>
+          <div class="perf-row"><span style="color:var(--t3)">Money Minute</span><span style="font-weight:600;color:var(--green)">↑ 5.9K</span></div>
+          <div class="perf-row"><span style="color:var(--t3)">Niwali Wellness</span><span style="font-weight:600;color:var(--red)">↓ 1.2K</span></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PIPELINE ═══ -->
+  <div class="view" id="v-pipeline">
+    <div class="pipe-head"><h2>Video Pipeline</h2><div class="pipe-filters"><button class="filter active">All Channels</button><button class="filter">Car Fusion</button><button class="filter">AI Tools</button><button class="filter">History</button></div></div>
+    <div class="kanban">
+      <div class="k-col"><div class="k-col-h">Scripting <span class="k-col-cnt" style="background:var(--purple-d);color:var(--purple)">3</span></div><div class="k-col-b">
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--red)"></div><div class="k-title">10 Facts About Deep Sea Creatures</div><div class="k-meta"><span class="k-tag" style="background:var(--purple-d);color:var(--purple)">EN</span><span class="k-tag" style="background:var(--blue-d);color:var(--blue)">History</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--blue),var(--purple))">JA</div><div class="k-date">Due today</div></div></div>
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--yellow)"></div><div class="k-title">AI Tools Weekly #13 — Best Free</div><div class="k-meta"><span class="k-tag" style="background:var(--purple-d);color:var(--purple)">EN</span><span class="k-tag" style="background:var(--accent-d);color:var(--accent)">AI Tools</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--accent),var(--purple))">SM</div><div class="k-date">Tomorrow</div></div></div>
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--green)"></div><div class="k-title">Money Tip: Emergency Funds 101</div><div class="k-meta"><span class="k-tag" style="background:var(--green-d);color:var(--green)">AR</span><span class="k-tag" style="background:var(--yellow-d);color:var(--yellow)">Money</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--green),var(--blue))">LR</div><div class="k-date">Oct 24</div></div></div>
+      </div></div>
+      <div class="k-col"><div class="k-col-h">Clips & Editing <span class="k-col-cnt" style="background:var(--blue-d);color:var(--blue)">2</span></div><div class="k-col-b">
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--red)"></div><div class="k-title">Car Fusion: Top 5 Supercars 2026</div><div class="k-meta"><span class="k-tag" style="background:var(--accent-d);color:var(--accent)">Flow</span><span class="k-tag" style="background:var(--yellow-d);color:var(--yellow)">3/5 clips</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--blue),var(--purple))">JA</div><div class="k-date">Due today</div></div></div>
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--yellow)"></div><div class="k-title">History: Fall of Constantinople</div><div class="k-meta"><span class="k-tag" style="background:var(--green-d);color:var(--green)">Pexels</span><span class="k-tag" style="background:var(--green-d);color:var(--green)">5/5 done</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--blue),var(--purple))">JA</div><div class="k-date">In CapCut</div></div></div>
+      </div></div>
+      <div class="k-col"><div class="k-col-h">QA Review <span class="k-col-cnt" style="background:var(--yellow-d);color:var(--yellow)">2</span></div><div class="k-col-b">
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--green)"></div><div class="k-title">Herbal Wellness: Turmeric Benefits</div><div class="k-meta"><span class="k-tag" style="background:var(--green-d);color:var(--green)">PASS</span><span class="k-tag" style="background:var(--green-d);color:var(--green)">SEO 91</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--orange),var(--accent))">FK</div><div class="k-date">Awaiting</div></div></div>
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--yellow)"></div><div class="k-title">Japanese Phrases #7 — Travel</div><div class="k-meta"><span class="k-tag" style="background:var(--yellow-d);color:var(--yellow)">WARN</span><span class="k-tag" style="background:var(--red-d);color:var(--red)">Caption fix</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--accent),var(--purple))">SM</div><div class="k-date">Fix needed</div></div></div>
+      </div></div>
+      <div class="k-col"><div class="k-col-h">Approved <span class="k-col-cnt" style="background:var(--green-d);color:var(--green)">1</span></div><div class="k-col-b">
+        <div class="k-card glow-border"><div class="k-prio" style="background:var(--green)"></div><div class="k-title">Motivation: Start Before You're Ready</div><div class="k-meta"><span class="k-tag" style="background:var(--green-d);color:var(--green)">SEO 87</span><span class="k-tag" style="background:var(--green-d);color:var(--green)">PASS</span></div><div class="k-foot"><div class="k-assignee" style="background:linear-gradient(135deg,var(--orange),var(--accent))">FK</div><div class="k-date">Ready</div></div></div>
+      </div></div>
+      <div class="k-col"><div class="k-col-h">Published <span class="k-col-cnt" style="background:var(--accent-d);color:var(--accent)">3</span></div><div class="k-col-b">
+        <div class="k-card" style="opacity:.6"><div class="k-title">AI Tools: ChatGPT Tricks</div><div class="k-meta"><span class="k-tag" style="background:var(--accent-d);color:var(--accent)">YouTube</span><span style="font-size:10px;color:var(--t4)">2h ago</span></div></div>
+        <div class="k-card" style="opacity:.6"><div class="k-title">Money: Passive Income Basics</div><div class="k-meta"><span class="k-tag" style="background:var(--accent-d);color:var(--accent)">YouTube</span><span style="font-size:10px;color:var(--t4)">5h ago</span></div></div>
+        <div class="k-card" style="opacity:.6"><div class="k-title">Car Fusion: Electric SUV Showdown</div><div class="k-meta"><span class="k-tag" style="background:var(--accent-d);color:var(--accent)">YouTube</span><span style="font-size:10px;color:var(--t4)">8h ago</span></div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ═══ SCRIPTS ═══ -->
+  <div class="view" id="v-scripts">
+    <div class="scripts">
+      <div class="sc-list">
+        <div class="sc-list-h"><h3>Scripts</h3><button class="tb-btn" style="font-size:11px;padding:5px 12px">+ New</button></div>
+        <div class="sc-list-b">
+          <div class="sc-item active"><div class="sc-item-title">10 Facts About Space You Won't Believe</div><div class="sc-item-meta"><span class="sc-item-status" style="background:var(--green-d);color:var(--green)">Approved</span><span>v3</span><span>EN</span><span>45s</span></div></div>
+          <div class="sc-item"><div class="sc-item-title">AI Tools Weekly #13 — Best Free Tools</div><div class="sc-item-meta"><span class="sc-item-status" style="background:var(--yellow-d);color:var(--yellow)">Draft</span><span>v1</span><span>EN</span><span>30s</span></div></div>
+          <div class="sc-item"><div class="sc-item-title">Money Tip: Emergency Funds 101</div><div class="sc-item-meta"><span class="sc-item-status" style="background:var(--purple-d);color:var(--purple)">Generating</span><span>—</span><span>AR</span></div></div>
+          <div class="sc-item"><div class="sc-item-title">Car Fusion: Top 5 Supercars 2026</div><div class="sc-item-meta"><span class="sc-item-status" style="background:var(--green-d);color:var(--green)">Approved</span><span>v2</span><span>EN</span><span>60s</span></div></div>
+          <div class="sc-item"><div class="sc-item-title">History: Fall of Constantinople</div><div class="sc-item-meta"><span class="sc-item-status" style="background:var(--green-d);color:var(--green)">Approved</span><span>v4</span><span>EN</span><span>45s</span></div></div>
+          <div class="sc-item"><div class="sc-item-title">Japanese Phrases #7 — Travel</div><div class="sc-item-meta"><span class="sc-item-status" style="background:var(--green-d);color:var(--green)">Approved</span><span>v2</span><span>JP</span><span>30s</span></div></div>
+        </div>
+      </div>
+      <div class="sc-editor">
+        <div class="ed-toolbar">
+          <span class="ed-tb-btn active">Edit</span><span class="ed-tb-btn">Preview</span><span class="ed-tb-btn">Versions</span>
+          <div class="ed-tb-div"></div>
+          <span class="ed-tb-btn">🤖 AI Rewrite</span><span class="ed-tb-btn">A/B Hooks</span>
+          <div style="flex:1"></div>
+          <span class="ed-tb-btn" style="color:var(--green)">✓ Approved</span>
+        </div>
+        <div class="ed-body">
+          <div class="ed-title" contenteditable>10 Facts About Space You Won't Believe</div>
+          <div class="ed-version">Version 3 · English · 45s · 5 scenes · Channel: History Unveiled</div>
+          <div class="ed-scene"><div class="ed-scene-head"><span class="ed-scene-num">Scene 1 — Hook</span><span class="ed-scene-dur">0:00 – 0:03 (3s)</span></div><div class="ed-scene-row"><div class="ed-scene-lbl">Narration</div><div class="ed-scene-txt">"Did you know there's a planet made entirely of diamonds?"</div></div><div class="ed-scene-row"><div class="ed-scene-lbl">Visual</div><div class="ed-scene-txt">Zooming into a glowing crystalline planet against a deep space backdrop.</div></div><div class="ed-scene-row"><div class="ed-scene-lbl">On-Screen</div><div class="ed-scene-txt">A PLANET OF DIAMONDS 💎</div></div></div>
+          <div class="ed-scene"><div class="ed-scene-head"><span class="ed-scene-num">Scene 2 — Body</span><span class="ed-scene-dur">0:03 – 0:12 (9s)</span></div><div class="ed-scene-row"><div class="ed-scene-lbl">Narration</div><div class="ed-scene-txt">"55 Cancri e is a super-Earth orbiting so close to its star that scientists believe its surface is covered in graphite and diamond."</div></div><div class="ed-scene-row"><div class="ed-scene-lbl">Visual</div><div class="ed-scene-txt">Split screen: planet diagram left, fact counter "1/10" right. Animated number counter overlay.</div></div></div>
+          <div class="ed-scene"><div class="ed-scene-head"><span class="ed-scene-num">Scene 3 — Body</span><span class="ed-scene-dur">0:12 – 0:25 (13s)</span></div><div class="ed-scene-row"><div class="ed-scene-lbl">Narration</div><div class="ed-scene-txt">"The largest known structure in the universe is the Hercules-Corona Borealis Great Wall. Light takes 10 billion years to travel across it."</div></div><div class="ed-scene-row"><div class="ed-scene-lbl">Visual</div><div class="ed-scene-txt">Cosmic web visualization zooming out from galaxy clusters. NASA Hubble footage.</div></div></div>
+          <div class="ed-scene"><div class="ed-scene-head"><span class="ed-scene-num">Scene 4 — Body</span><span class="ed-scene-dur">0:25 – 0:40 (15s)</span></div><div class="ed-scene-row"><div class="ed-scene-lbl">Narration</div><div class="ed-scene-txt">"Neutron stars are so dense that a teaspoon of their material would weigh about 6 billion tons."</div></div><div class="ed-scene-row"><div class="ed-scene-lbl">Visual</div><div class="ed-scene-txt">Neutron star spinning with light beams. Comparison graphic with Everest silhouette next to teaspoon.</div></div></div>
+          <div class="ed-scene"><div class="ed-scene-head"><span class="ed-scene-num">Scene 5 — CTA</span><span class="ed-scene-dur">0:40 – 0:45 (5s)</span></div><div class="ed-scene-row"><div class="ed-scene-lbl">Narration</div><div class="ed-scene-txt">"Follow for Part 2 — we've got 7 more facts that'll blow your mind."</div></div><div class="ed-scene-row"><div class="ed-scene-lbl">On-Screen</div><div class="ed-scene-txt">FOLLOW FOR PART 2 → 🚀</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VIDEO PROJECT ═══ -->
+  <div class="view" id="v-project">
+    <div class="proj-head"><div><h2>Car Fusion: Top 5 Supercars 2026</h2><p>Channel: Car Fusion · English · 60s · 5 scenes</p></div><div style="display:flex;gap:8px"><button class="filter">Edit Pack ↓</button><button class="tb-btn">Approve & Schedule</button></div></div>
+    <div class="proj-steps">
+      <div class="proj-step done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Idea</div>
+      <div class="proj-step done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Script</div>
+      <div class="proj-step done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Scenes</div>
+      <div class="proj-step now">● Clips</div>
+      <div class="proj-step">Editing</div><div class="proj-step">QA</div><div class="proj-step">SEO</div><div class="proj-step">Policy</div><div class="proj-step">Approval</div><div class="proj-step">Publish</div>
+    </div>
+    <div class="proj-grid">
+      <div class="scenes-list">
+        <div class="scene-card"><div class="scene-num">1</div><div class="scene-info"><h4>Hook — "The fastest car in the world isn't what you think"</h4><p><strong>Visual:</strong> Slow-motion supercar launch. <strong>Duration:</strong> 3s</p></div><span class="scene-status" style="background:var(--green-d);color:var(--green)">Clip Ready</span></div>
+        <div class="scene-card"><div class="scene-num">2</div><div class="scene-info"><h4>#5 — Pagani Utopia ($2.2M)</h4><p><strong>Visual:</strong> Rolling shots, interior details. <strong>Duration:</strong> 12s</p></div><span class="scene-status" style="background:var(--green-d);color:var(--green)">Clip Ready</span></div>
+        <div class="scene-card"><div class="scene-num">3</div><div class="scene-info"><h4>#4 — Koenigsegg Jesko Absolut (330mph)</h4><p><strong>Visual:</strong> Track footage, speedometer. <strong>Duration:</strong> 12s</p></div><span class="scene-status" style="background:var(--green-d);color:var(--green)">Clip Ready</span></div>
+        <div class="scene-card"><div class="scene-num">4</div><div class="scene-info"><h4>#3 — Bugatti Tourbillon</h4><p><strong>Visual:</strong> Reveal shot, engine close-up. <strong>Duration:</strong> 12s</p></div><span class="scene-status" style="background:var(--yellow-d);color:var(--yellow)">Awaiting</span></div>
+        <div class="scene-card"><div class="scene-num">5</div><div class="scene-info"><h4>CTA — "Follow for Part 2"</h4><p><strong>Visual:</strong> Teaser montage, loop ending. <strong>Duration:</strong> 5s</p></div><span class="scene-status" style="background:var(--yellow-d);color:var(--yellow)">Awaiting</span></div>
+      </div>
+      <div class="side-panel">
+        <div class="side-card"><div class="side-card-h">Project Details</div><div class="side-card-b">
+          <div class="side-row"><span class="side-row-l">Status</span><span class="side-row-v" style="color:var(--blue)">Clips In Progress</span></div>
+          <div class="side-row"><span class="side-row-l">Assigned</span><span class="side-row-v">John A.</span></div>
+          <div class="side-row"><span class="side-row-l">Due</span><span class="side-row-v">Oct 22, 2026</span></div>
+          <div class="side-row"><span class="side-row-l">Priority</span><span class="side-row-v" style="color:var(--red)">● High</span></div>
+          <div class="side-row"><span class="side-row-l">TTS</span><span class="side-row-v">TWC TTS</span></div>
+          <div class="side-row"><span class="side-row-l">Clips</span><span class="side-row-v">3 / 5</span></div>
+        </div></div>
+        <div class="side-card"><div class="side-card-h">SEO Report</div><div class="side-card-b" style="text-align:center">
+          <div class="seo-ring" style="color:var(--green)">84</div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:12px">Good — above threshold</div>
+          <div class="seo-row"><span style="color:var(--t3)">Title</span><span style="color:var(--green)">✓ Strong</span></div>
+          <div class="seo-row"><span style="color:var(--t3)">Tags</span><span style="color:var(--green)">✓ 12 tags</span></div>
+          <div class="seo-row"><span style="color:var(--t3)">Hashtags</span><span style="color:var(--green)">✓ 5</span></div>
+          <div class="seo-row"><span style="color:var(--t3)">Description</span><span style="color:var(--yellow)">⚠ Longer</span></div>
+        </div></div>
+        <div class="side-card"><div class="side-card-h">Policy Check</div><div class="side-card-b">
+          <div class="pol-row"><span class="pol-badge" style="background:var(--green-d);color:var(--green)">PASS</span>Originality</div>
+          <div class="pol-row"><span class="pol-badge" style="background:var(--green-d);color:var(--green)">PASS</span>Copyright</div>
+          <div class="pol-row"><span class="pol-badge" style="background:var(--green-d);color:var(--green)">PASS</span>Community</div>
+          <div class="pol-row"><span class="pol-badge" style="background:var(--green-d);color:var(--green)">PASS</span>AI Disclosure</div>
+          <div class="pol-row"><span class="pol-badge" style="background:var(--green-d);color:var(--green)">PASS</span>Ad-Friendly</div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CHANNELS ═══ -->
+  <div class="view" id="v-channels">
+    <div class="ch-head"><h2>Channels</h2><button class="tb-btn">+ New Channel</button></div>
+    <div class="ch-grid">
+      <div class="ch-card glow-border"><div class="blob-bg"><div class="blob" style="width:180px;height:180px;background:#e8227a;top:-40px;right:-40px"></div><div class="blob" style="width:120px;height:120px;background:#8c0f60;bottom:-30px;left:-20px"></div></div><div class="ch-card-top"><div class="ch-icon" style="background:var(--accent-d)">🚗</div><div><h3>Car Fusion</h3><p>Cars & Supercars · English</p></div></div><div class="ch-stats"><div class="ch-stat"><div class="ch-stat-v">142</div><div class="ch-stat-l">Videos</div></div><div class="ch-stat"><div class="ch-stat-v">12.4K</div><div class="ch-stat-l">Views/Day</div></div><div class="ch-stat"><div class="ch-stat-v">2</div><div class="ch-stat-l">Quota</div></div></div><div class="ch-platforms"><span class="plat-tag">YouTube</span><span class="plat-tag" style="opacity:.4">TikTok (P2)</span></div></div>
+      <div class="ch-card glow-border"><div class="blob-bg"><div class="blob" style="width:180px;height:180px;background:#8b5cf6;top:-40px;right:-40px"></div><div class="blob" style="width:120px;height:120px;background:#6c5ce7;bottom:-30px;left:-20px"></div></div><div class="ch-card-top"><div class="ch-icon" style="background:var(--purple-d)">🤖</div><div><h3>AI Tools Daily</h3><p>Tech & AI · English</p></div></div><div class="ch-stats"><div class="ch-stat"><div class="ch-stat-v">89</div><div class="ch-stat-l">Videos</div></div><div class="ch-stat"><div class="ch-stat-v">8.7K</div><div class="ch-stat-l">Views/Day</div></div><div class="ch-stat"><div class="ch-stat-v">2</div><div class="ch-stat-l">Quota</div></div></div><div class="ch-platforms"><span class="plat-tag">YouTube</span></div></div>
+      <div class="ch-card glow-border"><div class="blob-bg"><div class="blob" style="width:180px;height:180px;background:#3b82f6;top:-40px;right:-40px"></div><div class="blob" style="width:120px;height:120px;background:#2563eb;bottom:-30px;left:-20px"></div></div><div class="ch-card-top"><div class="ch-icon" style="background:var(--blue-d)">🏛️</div><div><h3>History Unveiled</h3><p>History & Mysteries · English</p></div></div><div class="ch-stats"><div class="ch-stat"><div class="ch-stat-v">67</div><div class="ch-stat-l">Videos</div></div><div class="ch-stat"><div class="ch-stat-v">3.1K</div><div class="ch-stat-l">Views/Day</div></div><div class="ch-stat"><div class="ch-stat-v">1</div><div class="ch-stat-l">Quota</div></div></div><div class="ch-platforms"><span class="plat-tag">YouTube</span></div></div>
+      <div class="ch-card glow-border"><div class="blob-bg"><div class="blob" style="width:180px;height:180px;background:#10b981;top:-40px;right:-40px"></div><div class="blob" style="width:120px;height:120px;background:#059669;bottom:-30px;left:-20px"></div></div><div class="ch-card-top"><div class="ch-icon" style="background:var(--green-d)">💰</div><div><h3>Money Minute</h3><p>Finance · EN + AR</p></div></div><div class="ch-stats"><div class="ch-stat"><div class="ch-stat-v">54</div><div class="ch-stat-l">Videos</div></div><div class="ch-stat"><div class="ch-stat-v">5.9K</div><div class="ch-stat-l">Views/Day</div></div><div class="ch-stat"><div class="ch-stat-v">1</div><div class="ch-stat-l">Quota</div></div></div><div class="ch-platforms"><span class="plat-tag">YouTube</span></div></div>
+      <div class="ch-card glow-border"><div class="blob-bg"><div class="blob" style="width:180px;height:180px;background:#f97316;top:-40px;right:-40px"></div><div class="blob" style="width:120px;height:120px;background:#ea580c;bottom:-30px;left:-20px"></div></div><div class="ch-card-top"><div class="ch-icon" style="background:var(--yellow-d)">🌿</div><div><h3>Niwali Wellness</h3><p>Herbal Health · English</p></div></div><div class="ch-stats"><div class="ch-stat"><div class="ch-stat-v">31</div><div class="ch-stat-l">Videos</div></div><div class="ch-stat"><div class="ch-stat-v">1.2K</div><div class="ch-stat-l">Views/Day</div></div><div class="ch-stat"><div class="ch-stat-v">1</div><div class="ch-stat-l">Quota</div></div></div><div class="ch-platforms"><span class="plat-tag">YouTube</span></div></div>
+      <div class="ch-card ch-card-add"><span>+</span><span style="font-size:13px;color:var(--t3)">Add New Channel</span></div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ═══ Three.js Particle Background (from structureFlowRenderer.ts) ═══ */
+(function(){
+  const c=document.getElementById('particles-bg');if(!c||typeof THREE==='undefined')return;
+  const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,c.clientWidth/Math.max(1,c.clientHeight),.1,1000);
+  cam.position.z=30;cam.position.y=5;
+  const ren=new THREE.WebGLRenderer({alpha:true,antialias:true});
+  ren.setPixelRatio(Math.min(devicePixelRatio,2));ren.setSize(c.clientWidth,c.clientHeight);c.appendChild(ren.domElement);
+  const geo=new THREE.BufferGeometry(),N=15000,pos=new Float32Array(N*3),R=25;
+  for(let i=0;i<N;i++){const u=Math.random(),th=u*2*Math.PI,ph=Math.acos(Math.random()*.8+.2);pos[i*3]=R*Math.sin(ph)*Math.cos(th);pos[i*3+1]=R*Math.cos(ph)-20;pos[i*3+2]=R*Math.sin(ph)*Math.sin(th)}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({size:.08,color:0xffffff,transparent:true,opacity:.4,blending:THREE.AdditiveBlending,depthWrite:false});
+  const pts=new THREE.Points(geo,mat);scene.add(pts);
+  function tick(){pts.rotation.y+=.0008;pts.rotation.z+=.0002;ren.render(scene,cam);requestAnimationFrame(tick)}
+  requestAnimationFrame(tick);
+  new ResizeObserver(()=>{cam.aspect=c.clientWidth/Math.max(1,c.clientHeight);cam.updateProjectionMatrix();ren.setSize(c.clientWidth,c.clientHeight)}).observe(c);
+})();
+
+/* ═══ 3D Tilt Effect (from tilt-card.tsx — rotationFactor:11) ═══ */
+document.querySelectorAll('.tilt-card').forEach(card=>{
+  card.addEventListener('mousemove',e=>{
+    const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
+    card.style.transform=`perspective(800px) rotateY(${x*11}deg) rotateX(${-y*11}deg) translateY(-2px)`;
+  });
+  card.addEventListener('mouseleave',()=>{card.style.transform='perspective(800px) rotateY(0) rotateX(0) translateY(0)';});
+});
+
+/* ═══ View Switching (spring animation from motion-nav) ═══ */
+const titles={dashboard:'Dashboard',pipeline:'Pipeline',scripts:'Script Board',project:'Video Project',channels:'Channels'};
+function go(id,el){
+  document.querySelectorAll('.view').forEach(v=>{v.classList.remove('active');v.style.display='none'});
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const v=document.getElementById('v-'+id);
+  if(v){v.style.display='block';requestAnimationFrame(()=>v.classList.add('active'));}
+  if(el)el.classList.add('active');
+  document.getElementById('tb-title').textContent=titles[id]||id;
+  /* Re-animate stat bars and quota bars */
+  if(id==='dashboard'){animateBars();}
+}
+
+/* ═══ Animated Stat / Quota Bars ═══ */
+function animateBars(){
+  document.querySelectorAll('[data-w]').forEach(el=>{el.style.width='0';setTimeout(()=>{el.style.width=el.dataset.w+'%';},100);});
+}
+/* Initial animation */
+setTimeout(animateBars,300);
+
+/* ═══ Interactive Toggles ═══ */
+document.querySelectorAll('.period button').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.period button').forEach(x=>x.classList.remove('active'));b.classList.add('active');});});
+document.querySelectorAll('.filter').forEach(b=>{b.addEventListener('click',()=>b.classList.toggle('active'));});
+document.querySelectorAll('.sc-item').forEach(item=>{item.addEventListener('click',()=>{document.querySelectorAll('.sc-item').forEach(i=>i.classList.remove('active'));item.classList.add('active');});});
+document.querySelectorAll('.ed-tb-btn').forEach(b=>{b.addEventListener('click',()=>{if(b.textContent.includes('✓'))return;const toolbar=b.closest('.ed-toolbar');toolbar.querySelectorAll('.ed-tb-btn').forEach(x=>{if(!x.textContent.includes('AI')&&!x.textContent.includes('A/B')&&!x.textContent.includes('✓'))x.classList.remove('active');});b.classList.add('active');});});
+</script>
+</body>
+</html>
