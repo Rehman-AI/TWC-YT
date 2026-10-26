@@ -29,27 +29,27 @@ export default async function ActivityPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Activity Log</h1>
+        <h1 className="text-xl font-bold text-zinc-900">Activity Log</h1>
         <p className="text-sm text-zinc-500">Complete audit trail of all actions</p>
       </div>
 
-      <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
         {logs.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-sm text-zinc-500">No activity recorded yet.</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/[0.03]">
+          <div className="divide-y divide-zinc-100">
             {logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 px-5 py-3 hover:bg-white/[0.01] transition-colors">
-                <span className={`w-2 h-2 rounded-full mt-1.5 flex-none ${actionColors[log.action] || "bg-zinc-500"}`} />
+              <div key={log.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-zinc-50/80 transition-colors">
+                <span className={`w-2 h-2 rounded-full mt-1.5 flex-none ${actionColors[log.action] || "bg-zinc-400"}`} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-zinc-300">
-                    <strong className="text-white font-medium">{log.user.name}</strong>{" "}
+                  <div className="text-xs text-zinc-600 leading-relaxed">
+                    <strong className="text-zinc-900 font-semibold">{log.user.name}</strong>{" "}
                     {log.details || log.action.toLowerCase().replace(/_/g, " ")}
                   </div>
                 </div>
-                <div className="text-[10px] text-zinc-600 flex-none">
+                <div className="text-[11px] text-zinc-400 font-medium flex-none">
                   {new Date(log.createdAt).toLocaleString()}
                 </div>
               </div>

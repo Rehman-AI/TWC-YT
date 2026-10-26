@@ -47,7 +47,7 @@ export function ScriptsClient({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white">Script Board</h1>
+          <h1 className="text-xl font-bold text-zinc-900">Script Board</h1>
           <p className="text-sm text-zinc-500">Write scripts and assign to video makers</p>
         </div>
         <button
@@ -60,8 +60,8 @@ export function ScriptsClient({
 
       <div className="grid grid-cols-[340px_1fr] gap-4 min-h-[calc(100vh-180px)]">
         {/* Script List */}
-        <div className="bg-[#111114] border border-white/[0.06] rounded-xl flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/[0.06] text-xs font-semibold text-zinc-400">
+        <div className="bg-white border border-zinc-200 shadow-sm rounded-xl flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-zinc-100 text-xs font-bold text-zinc-700 bg-zinc-50/50">
             All Scripts ({scripts.length})
           </div>
           <div className="flex-1 overflow-y-auto p-2">
@@ -74,17 +74,17 @@ export function ScriptsClient({
                   onClick={() => { setSelectedScript(s); setShowForm(false); }}
                   className={`p-3 rounded-lg cursor-pointer transition-all mb-1 border ${
                     selectedScript?.id === s.id
-                      ? "bg-pink-500/5 border-pink-500/15"
-                      : "border-transparent hover:bg-white/[0.02]"
+                      ? "bg-pink-50/80 border-pink-200"
+                      : "border-transparent hover:bg-zinc-50"
                   }`}
                 >
-                  <div className="text-[13px] font-medium text-white mb-1">{s.title}</div>
+                  <div className="text-[13px] font-semibold text-zinc-900 mb-1">{s.title}</div>
                   <div className="flex items-center gap-2 text-[11px]">
                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${statusColors[s.status]}`}>
                       {s.status}
                     </span>
                     <span className="text-zinc-500">{s.channel.name}</span>
-                    {s.videoMaker && <span className="text-zinc-600">→ {s.videoMaker.name}</span>}
+                    {s.videoMaker && <span className="text-zinc-600 font-medium">→ {s.videoMaker.name}</span>}
                   </div>
                 </div>
               ))
@@ -93,12 +93,12 @@ export function ScriptsClient({
         </div>
 
         {/* Right Panel — Form or Detail */}
-        <div className="bg-[#111114] border border-white/[0.06] rounded-xl flex flex-col overflow-hidden">
+        <div className="bg-white border border-zinc-200 shadow-sm rounded-xl flex flex-col overflow-hidden">
           {showForm ? (
             <div className="p-5 overflow-y-auto">
-              <h3 className="text-sm font-semibold text-white mb-4">New Script</h3>
+              <h3 className="text-sm font-bold text-zinc-900 mb-4">New Script</h3>
               {state?.error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg p-3 mb-4">{state.error}</div>
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3 mb-4">{state.error}</div>
               )}
               <form action={async (formData) => {
                 formData.set("extraFields", JSON.stringify(extraFields));
@@ -107,30 +107,30 @@ export function ScriptsClient({
               }} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">Title</label>
-                    <input name="title" required placeholder="Script title" className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none" />
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">Title</label>
+                    <input name="title" required placeholder="Script title" className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1">Channel</label>
-                    <select name="channelId" required className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none">
+                    <label className="block text-xs font-medium text-zinc-600 mb-1">Channel</label>
+                    <select name="channelId" required className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none">
                       <option value="">Select channel</option>
                       {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Script Content</label>
-                  <textarea name="content" required rows={10} placeholder="Paste or write your script here... No limit." className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none resize-y font-mono" />
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Script Content</label>
+                  <textarea name="content" required rows={10} placeholder="Paste or write your script here... No limit." className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none resize-y font-mono" />
                 </div>
 
                 {/* Extra Fields */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-medium text-zinc-400">Extra Fields</label>
+                    <label className="text-xs font-medium text-zinc-600">Extra Fields</label>
                     <button
                       type="button"
                       onClick={() => setExtraFields([...extraFields, { label: "", value: "" }])}
-                      className="text-xs text-pink-400 hover:text-pink-300"
+                      className="text-xs text-pink-600 hover:text-pink-700 font-semibold"
                     >
                       + Add Field
                     </button>
@@ -145,7 +145,7 @@ export function ScriptsClient({
                           n[i].label = e.target.value;
                           setExtraFields(n);
                         }}
-                        className="px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
+                        className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none"
                       />
                       <input
                         placeholder="Value"
@@ -155,20 +155,20 @@ export function ScriptsClient({
                           n[i].value = e.target.value;
                           setExtraFields(n);
                         }}
-                        className="px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
+                        className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={() => setExtraFields(extraFields.filter((_, j) => j !== i))}
-                        className="text-xs text-zinc-600 hover:text-red-400 px-2"
+                        className="text-xs text-zinc-400 hover:text-red-600 px-2"
                       >✕</button>
                     </div>
                   ))}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Assign to Video Maker (optional)</label>
-                  <select name="videoMakerId" className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none">
+                  <label className="block text-xs font-medium text-zinc-600 mb-1">Assign to Video Maker (optional)</label>
+                  <select name="videoMakerId" className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none">
                     <option value="">Don&apos;t assign yet</option>
                     {videoMakers.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                   </select>
@@ -176,7 +176,7 @@ export function ScriptsClient({
 
                 <div className="flex gap-2 pt-2">
                   <SubmitButton pendingText="Saving...">Save Script</SubmitButton>
-                  <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
+                  <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-800">Cancel</button>
                 </div>
               </form>
             </div>
@@ -184,9 +184,9 @@ export function ScriptsClient({
             <div className="p-5 overflow-y-auto">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-white">{selectedScript.title}</h2>
+                  <h2 className="text-lg font-bold text-zinc-900">{selectedScript.title}</h2>
                   <div className="text-xs text-zinc-500 mt-1">
-                    {selectedScript.channel.name} · by {selectedScript.writer.name}
+                    {selectedScript.channel.name} · by <span className="font-medium text-zinc-700">{selectedScript.writer.name}</span>
                     {selectedScript.videoMaker && ` · assigned to ${selectedScript.videoMaker.name}`}
                   </div>
                 </div>
@@ -195,26 +195,26 @@ export function ScriptsClient({
                 </span>
               </div>
               {selectedScript.video && (
-                <div className="bg-green-500/5 border border-green-500/10 rounded-lg p-3 mb-4">
-                  <div className="text-xs font-semibold text-green-400 mb-1">CapCut Video Link</div>
-                  <a href={selectedScript.video.capCutLink} target="_blank" rel="noreferrer" className="text-sm text-blue-400 hover:underline break-all">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4">
+                  <div className="text-xs font-semibold text-emerald-700 mb-1">CapCut Video Link</div>
+                  <a href={selectedScript.video.capCutLink} target="_blank" rel="noreferrer" className="text-sm text-pink-600 hover:underline break-all">
                     {selectedScript.video.capCutLink}
                   </a>
                 </div>
               )}
-              <div className="bg-[#0c0c0f] rounded-lg p-4">
-                <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono leading-relaxed">{selectedScript.content}</pre>
+              <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
+                <pre className="text-sm text-zinc-800 whitespace-pre-wrap font-mono leading-relaxed">{selectedScript.content}</pre>
               </div>
               {(() => {
                 const extras = selectedScript.extraFields as ExtraField[] | null;
                 if (!extras || !Array.isArray(extras) || extras.length === 0) return null;
                 return (
                   <div className="mt-4 space-y-2">
-                    <h4 className="text-xs font-semibold text-zinc-400">Extra Fields</h4>
+                    <h4 className="text-xs font-bold text-zinc-700">Extra Fields</h4>
                     {extras.map((f: ExtraField, i: number) => (
                       <div key={i} className="flex gap-2 text-sm">
                         <span className="text-zinc-500 font-medium">{String(f.label)}:</span>
-                        <span className="text-zinc-300">{String(f.value)}</span>
+                        <span className="text-zinc-800">{String(f.value)}</span>
                       </div>
                     ))}
                   </div>

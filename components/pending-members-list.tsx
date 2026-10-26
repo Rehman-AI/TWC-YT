@@ -39,15 +39,15 @@ export function PendingMembersList({ members }: { members: MemberProgressItem[] 
             <div
               key={member.id}
               onClick={() => setSelectedMember({ id: member.id, name: member.name })}
-              className="flex items-center gap-3 p-2.5 rounded-xl border border-transparent hover:border-white/[0.06] hover:bg-white/[0.02] cursor-pointer transition-all group"
+              className="flex items-center gap-3 p-2.5 rounded-xl border border-transparent hover:border-zinc-200 hover:bg-zinc-50/80 cursor-pointer transition-all group"
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white flex-none shadow-sm shadow-pink-500/20 group-hover:scale-105 transition-transform">
                 {member.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-white group-hover:text-pink-400 transition-colors flex items-center gap-1.5">
+                <div className="text-xs font-semibold text-zinc-900 group-hover:text-pink-600 transition-colors flex items-center gap-1.5">
                   {member.name}
-                  <span className="text-[10px] text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity font-normal">
+                  <span className="text-[10px] text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity font-normal">
                     (click to view today)
                   </span>
                 </div>
@@ -55,14 +55,14 @@ export function PendingMembersList({ members }: { members: MemberProgressItem[] 
               </div>
               <div className="flex items-center gap-4 text-[11px]">
                 <div className="text-center">
-                  <div className="font-semibold text-yellow-400">{pendingScripts}</div>
-                  <div className="text-zinc-600">Pending</div>
+                  <div className="font-semibold text-amber-600">{pendingScripts}</div>
+                  <div className="text-zinc-400">Pending</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold text-emerald-400">{totalDone}</div>
-                  <div className="text-zinc-600">Done Today</div>
+                  <div className="font-semibold text-emerald-600">{totalDone}</div>
+                  <div className="text-zinc-400">Done Today</div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-pink-400 group-hover:translate-x-0.5 transition-all" />
+                <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
               </div>
             </div>
           );

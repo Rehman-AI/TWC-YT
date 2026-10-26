@@ -76,7 +76,7 @@ export default async function DashboardPage() {
     <div>
       <div className="flex items-end justify-between mb-6">
         <div>
-          <h1 className="text-[22px] font-bold text-white mb-0.5">
+          <h1 className="text-[22px] font-bold text-zinc-900 mb-0.5">
             Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {session.name.split(" ")[0]}
           </h1>
           <p className="text-[13px] text-zinc-500">Here&apos;s what&apos;s happening across your channels today.</p>
@@ -95,10 +95,12 @@ export default async function DashboardPage() {
         {/* Left Column */}
         <div className="space-y-4">
           {/* Pending Overview */}
-          <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-              <h3 className="text-[13px] font-semibold text-white">Pending Work</h3>
-              <span className="text-[11px] text-zinc-500">{pendingPlatformTasks} platform tasks pending</span>
+          <div className="bg-white border border-zinc-200 shadow-sm rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+              <h3 className="text-[13px] font-bold text-zinc-900">Pending Work</h3>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
+                {pendingPlatformTasks} platform tasks pending
+              </span>
             </div>
             <div className="px-5 py-4">
               <PendingMembersList members={memberProgress} />
@@ -107,23 +109,23 @@ export default async function DashboardPage() {
         </div>
 
         {/* Right Column — Activity */}
-        <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <h3 className="text-[13px] font-semibold text-white">Recent Activity</h3>
+        <div className="bg-white border border-zinc-200 shadow-sm rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-100">
+            <h3 className="text-[13px] font-bold text-zinc-900">Recent Activity</h3>
           </div>
           <div className="px-5 py-2 max-h-[500px] overflow-y-auto">
             {recentActivity.length === 0 ? (
               <p className="text-sm text-zinc-500 py-4">No activity yet.</p>
             ) : (
               recentActivity.map((log) => (
-                <div key={log.id} className="flex gap-2.5 py-2.5 border-b border-white/[0.03] last:border-0">
+                <div key={log.id} className="flex gap-2.5 py-2.5 border-b border-zinc-100 last:border-0">
                   <span className={`w-2 h-2 rounded-full mt-1.5 flex-none ${actionColors[log.action] || actionColors.default}`} />
                   <div>
-                    <div className="text-xs text-zinc-300">
-                      <strong className="text-white font-medium">{log.user.name}</strong>{" "}
+                    <div className="text-xs text-zinc-700">
+                      <strong className="text-zinc-900 font-semibold">{log.user.name}</strong>{" "}
                       {log.details || log.action.toLowerCase().replace(/_/g, " ")}
                     </div>
-                    <div className="text-[10px] text-zinc-600 mt-0.5">
+                    <div className="text-[10px] text-zinc-400 mt-0.5">
                       {timeAgo(log.createdAt)}
                     </div>
                   </div>
@@ -145,17 +147,17 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     green: "from-green-500/10 to-transparent",
   };
   const textColors: Record<string, string> = {
-    pink: "text-pink-400",
-    purple: "text-purple-400",
-    blue: "text-blue-400",
-    green: "text-green-400",
+    pink: "text-pink-600",
+    purple: "text-purple-600",
+    blue: "text-blue-600",
+    green: "text-emerald-600",
   };
 
   return (
-    <div className="relative p-5 rounded-xl bg-[#111114] border border-white/[0.06] overflow-hidden hover:border-white/[0.1] transition-colors">
+    <div className="relative p-5 rounded-xl bg-white border border-zinc-200 shadow-sm overflow-hidden hover:border-zinc-300 hover:shadow transition-all">
       <div className={`absolute inset-0 bg-gradient-to-br ${colors[color]} pointer-events-none`} />
       <div className="relative">
-        <div className="text-xs text-zinc-500 mb-2">{label}</div>
+        <div className="text-xs font-medium text-zinc-500 mb-2">{label}</div>
         <div className={`text-[28px] font-bold ${textColors[color]}`}>{value}</div>
       </div>
     </div>
