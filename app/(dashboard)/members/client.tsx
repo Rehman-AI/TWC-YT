@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFormState } from "react-dom";
-import { createMember, deleteMember } from "@/app/actions/members";
+import { createMember, updateMember, deleteMember } from "@/app/actions/members";
 import { SubmitButton } from "@/components/submit-button";
+import { MemberDetailModal } from "@/components/member-detail-modal";
+import { KeyRound, X } from "lucide-react";
 
 type Member = {
   id: string;
@@ -22,7 +24,16 @@ type Role = {
 
 export function MembersClient({ members, roles }: { members: Member[]; roles: Role[] }) {
   const [showForm, setShowForm] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<{ id: string; name: string } | null>(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [state, formAction] = useFormState(createMember, null);
+  const [editState, editAction] = useFormState(updateMember, null);
+
+  useEffect(() => {
+    if (editState?.success) {
+      setEditingMember(null);
+    }
+  }, [editState]);
 
   return (
     <div>
@@ -91,13 +102,17 @@ export function MembersClient({ members, roles }: { members: Member[]; roles: Ro
           </thead>
           <tbody>
             {members.map((m) => (
-              <tr key={m.id} className="border-b border-white/[0.03] hover:bg-white/[0.01] transition-colors">
+              <tr
+                key={m.id}
+                className="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer transition-colors"
+                onClick={() => setSelectedMember({ id: m.id, name: m.name })}
+              >
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white">
                       {m.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                     </div>
-                    <span className="text-sm text-white font-medium">{m.name}</span>
+                    <span className="text-sm text-white font-medium hover:text-pink-400 transition-colors">{m.name}</span>
                     {m.isBoss && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500/10 text-pink-400">BOSS</span>}
                   </div>
                 </td>
@@ -107,18 +122,141 @@ export function MembersClient({ members, roles }: { members: Member[]; roles: Ro
                     {m.isBoss ? "Boss (all permissions)" : m.role?.name || "No role"}
                   </span>
                 </td>
-                <td className="px-5 py-3 text-right">
-                  {!m.isBoss && (
-                    <button onClick={() => deleteMember(m.id)} className="text-xs text-zinc-600 hover:text-red-400 transition-colors">
-                      Remove
+                <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => setSelectedMember({ id: m.id, name: m.name })}
+                      className="text-xs text-pink-400 hover:text-pink-300 font-medium transition-colors"
+                    >
+                      View Work →
                     </button>
-                  )}
+                    {!m.isBoss && (
+                      <button
+                        onClick={() => setEditingMember(m)}
+                        className="text-xs text-zinc-400 hover:text-white transition-colors"
+                      >
+                        Edit / Password
+                      </button>
+                    )}
+                    {!m.isBoss && (
+                      <button onClick={() => deleteMember(m.id)} className="text-xs text-zinc-600 hover:text-red-400 transition-colors">
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {selectedMember && (
+        <MemberDetailModal
+          memberId={selectedMember.id}
+          memberName={selectedMember.name}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
+
+      {editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md bg-[#111114] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/[0.06] flex items-center justify-between bg-[#16161d]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white">Edit Member / Reset Password</h2>
+                  <p className="text-[11px] text-zinc-400">{editingMember.name} ({editingMember.email})</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingMember(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {editState?.error && (
+                <div className="p-3 mb-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                  {editState.error}
+                </div>
+              )}
+
+              <form action={editAction} className="space-y-4">
+                <input type="hidden" name="id" value={editingMember.id} />
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Full Name</label>
+                  <input
+                    name="name"
+                    required
+                    defaultValue={editingMember.name}
+                    className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    defaultValue={editingMember.email}
+                    className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">Role</label>
+                  <select
+                    name="roleId"
+                    defaultValue={editingMember.role?.id || ""}
+                    className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
+                  >
+                    <option value="">No role</option>
+                    {roles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">
+                    New Password <span className="text-zinc-500 font-normal">(leave blank to keep current)</span>
+                  </label>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="Set new password..."
+                    className="w-full px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMember(null)}
+                    className="px-4 py-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <SubmitButton pendingText="Saving...">Save Changes</SubmitButton>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

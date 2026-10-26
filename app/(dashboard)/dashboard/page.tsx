@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { PendingMembersList } from "@/components/pending-members-list";
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -100,41 +101,7 @@ export default async function DashboardPage() {
               <span className="text-[11px] text-zinc-500">{pendingPlatformTasks} platform tasks pending</span>
             </div>
             <div className="px-5 py-4">
-              {memberProgress.length === 0 ? (
-                <p className="text-sm text-zinc-500">No members yet. Create roles and members to get started.</p>
-              ) : (
-                <div className="space-y-3">
-                  {memberProgress.map((member) => {
-                    const pendingScripts = member.videosAssigned.length;
-                    const scriptsToday = member.scriptsWritten.length;
-                    const videosToday = member.videosCreated.length;
-                    const postedToday = member.platformTasks.length;
-                    const totalDone = scriptsToday + videosToday + postedToday;
-
-                    return (
-                      <div key={member.id} className="flex items-center gap-3 py-2 border-b border-white/[0.03] last:border-0">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white flex-none">
-                          {member.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-white">{member.name}</div>
-                          <div className="text-[11px] text-zinc-500">{member.role?.name || "No role"}</div>
-                        </div>
-                        <div className="flex gap-4 text-[11px]">
-                          <div className="text-center">
-                            <div className="font-semibold text-yellow-400">{pendingScripts}</div>
-                            <div className="text-zinc-600">Pending</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-semibold text-green-400">{totalDone}</div>
-                            <div className="text-zinc-600">Done Today</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <PendingMembersList members={memberProgress} />
             </div>
           </div>
         </div>

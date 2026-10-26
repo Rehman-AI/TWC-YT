@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { SessionUser } from "@/lib/auth";
 import { hasPermission, hasAnyPermission } from "@/lib/permissions";
+import { ChangePasswordModal } from "@/components/change-password-modal";
+import { KeyRound } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: "grid", permission: null },
@@ -29,6 +32,7 @@ const icons: Record<string, React.ReactNode> = {
 
 export function Sidebar({ session }: { session: SessionUser }) {
   const pathname = usePathname();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const platformPerms = ["post_youtube", "post_tiktok", "post_facebook", "post_snapchat", "post_instagram"] as const;
 
@@ -91,15 +95,28 @@ export function Sidebar({ session }: { session: SessionUser }) {
       </nav>
 
       {/* User */}
-      <div className="p-3 border-t border-white/[0.06] flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#e8227a] to-[#8b5cf6] flex items-center justify-center text-[11px] font-semibold text-white flex-none">
-          {session.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+      <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#e8227a] to-[#8b5cf6] flex items-center justify-center text-[11px] font-semibold text-white flex-none">
+            {session.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-white truncate">{session.name}</div>
+            <div className="text-[11px] text-zinc-500">{session.isBoss ? "Boss" : "Member"}</div>
+          </div>
         </div>
-        <div className="min-w-0">
-          <div className="text-xs font-medium text-white truncate">{session.name}</div>
-          <div className="text-[11px] text-zinc-500">{session.isBoss ? "Boss" : "Member"}</div>
-        </div>
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          title="Change Password"
+          className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-colors flex-none"
+        >
+          <KeyRound className="w-3.5 h-3.5" />
+        </button>
       </div>
+
+      {showPasswordModal && (
+        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+      )}
     </aside>
   );
 }
