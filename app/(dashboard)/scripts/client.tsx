@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState } from "react";
+import { useFormState } from "react-dom";
 import { createScript } from "@/app/actions/scripts";
+import { SubmitButton } from "@/components/submit-button";
 
 type ExtraField = { label: string; value: string };
 
@@ -32,7 +34,7 @@ export function ScriptsClient({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [extraFields, setExtraFields] = useState<ExtraField[]>([]);
-  const [state, formAction, pending] = useActionState(createScript, null);
+  const [state, formAction] = useFormState(createScript, null);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
 
   const statusColors: Record<string, string> = {
@@ -173,9 +175,7 @@ export function ScriptsClient({
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <button type="submit" disabled={pending} className="px-4 py-2 bg-pink-600 text-white text-sm font-semibold rounded-lg hover:bg-pink-500 disabled:opacity-50">
-                    {pending ? "Saving..." : "Save Script"}
-                  </button>
+                  <SubmitButton pendingText="Saving...">Save Script</SubmitButton>
                   <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
                 </div>
               </form>

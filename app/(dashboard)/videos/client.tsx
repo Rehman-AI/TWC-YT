@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState } from "react";
+import { useFormState } from "react-dom";
 import { submitVideo } from "@/app/actions/videos";
+import { SubmitButton } from "@/components/submit-button";
 
 type AssignedScript = {
   id: string;
@@ -39,7 +41,7 @@ export function VideosClient({
   completedVideos: CompletedVideo[];
 }) {
   const [activeScript, setActiveScript] = useState<AssignedScript | null>(null);
-  const [state, formAction, pending] = useActionState(submitVideo, null);
+  const [state, formAction] = useFormState(submitVideo, null);
 
   return (
     <div>
@@ -117,13 +119,12 @@ export function VideosClient({
                         placeholder="Paste your CapCut video link here..."
                         className="flex-1 px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-pink-500/50 focus:outline-none"
                       />
-                      <button
-                        type="submit"
-                        disabled={pending}
+                      <SubmitButton
+                        pendingText="Submitting..."
                         className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-500 disabled:opacity-50 whitespace-nowrap"
                       >
-                        {pending ? "Submitting..." : "Submit Video ✓"}
-                      </button>
+                        Submit Video ✓
+                      </SubmitButton>
                     </form>
                     <p className="text-[11px] text-zinc-600 mt-2">
                       This will auto-create tasks for: {script.channel.platforms.map((p) => p.platformName).join(", ")}

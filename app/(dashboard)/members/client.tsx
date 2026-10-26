@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState } from "react";
+import { useFormState } from "react-dom";
 import { createMember, deleteMember } from "@/app/actions/members";
+import { SubmitButton } from "@/components/submit-button";
 
 type Member = {
   id: string;
@@ -20,7 +22,7 @@ type Role = {
 
 export function MembersClient({ members, roles }: { members: Member[]; roles: Role[] }) {
   const [showForm, setShowForm] = useState(false);
-  const [state, formAction, pending] = useActionState(createMember, null);
+  const [state, formAction] = useFormState(createMember, null);
 
   return (
     <div>
@@ -43,10 +45,7 @@ export function MembersClient({ members, roles }: { members: Member[]; roles: Ro
           {state?.error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg p-3 mb-4">{state.error}</div>
           )}
-          <form action={async (formData) => {
-            await formAction(formData);
-            if (!state?.error) setShowForm(false);
-          }} className="space-y-4">
+          <form action={formAction} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-zinc-400 mb-1">Full Name</label>
@@ -73,16 +72,13 @@ export function MembersClient({ members, roles }: { members: Member[]; roles: Ro
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="submit" disabled={pending} className="px-4 py-2 bg-pink-600 text-white text-sm font-semibold rounded-lg hover:bg-pink-500 disabled:opacity-50">
-                {pending ? "Creating..." : "Create Member"}
-              </button>
+              <SubmitButton pendingText="Creating...">Create Member</SubmitButton>
               <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Members List */}
       <div className="bg-[#111114] border border-white/[0.06] rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>

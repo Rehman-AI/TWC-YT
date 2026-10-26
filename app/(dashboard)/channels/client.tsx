@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState } from "react";
+import { useFormState } from "react-dom";
 import { createChannel, deleteChannel } from "@/app/actions/channels";
+import { SubmitButton } from "@/components/submit-button";
 
 const PLATFORMS = ["youtube", "tiktok", "facebook", "snapchat", "instagram"];
 const VIDEO_LENGTHS = ["1 min", "5 min", "10 min", "15 min", "30 min", "1 hr", "2 hr"];
@@ -26,7 +28,7 @@ type Channel = {
 
 export function ChannelsClient({ channels, isBoss }: { channels: Channel[]; isBoss: boolean }) {
   const [showForm, setShowForm] = useState(false);
-  const [state, formAction, pending] = useActionState(createChannel, null);
+  const [state, formAction] = useFormState(createChannel, null);
 
   return (
     <div>
@@ -49,10 +51,7 @@ export function ChannelsClient({ channels, isBoss }: { channels: Channel[]; isBo
           {state?.error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg p-3 mb-4">{state.error}</div>
           )}
-          <form action={async (formData) => {
-            await formAction(formData);
-            if (!state?.error) setShowForm(false);
-          }} className="space-y-4">
+          <form action={formAction} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-zinc-400 mb-1">Channel Name</label>
@@ -87,16 +86,13 @@ export function ChannelsClient({ channels, isBoss }: { channels: Channel[]; isBo
               </div>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="submit" disabled={pending} className="px-4 py-2 bg-pink-600 text-white text-sm font-semibold rounded-lg hover:bg-pink-500 disabled:opacity-50">
-                {pending ? "Creating..." : "Create Channel"}
-              </button>
+              <SubmitButton pendingText="Creating...">Create Channel</SubmitButton>
               <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-white">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Channel Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {channels.map((ch) => (
           <div key={ch.id} className="bg-[#111114] border border-white/[0.06] rounded-xl p-5 hover:border-white/[0.1] transition-all hover:-translate-y-0.5">

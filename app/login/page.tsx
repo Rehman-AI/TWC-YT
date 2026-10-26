@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormState } from "react-dom";
 import { loginAction } from "@/app/actions/auth";
+import { SubmitButton } from "@/components/submit-button";
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(loginAction, null);
+  const [state, formAction] = useFormState(loginAction, null);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
@@ -52,13 +53,12 @@ export default function LoginPage() {
                 placeholder="••••••••"
               />
             </div>
-            <button
-              type="submit"
-              disabled={pending}
+            <SubmitButton
+              pendingText="Signing in..."
               className="w-full py-2.5 px-4 bg-gradient-to-r from-[#8c0f60] to-[#e8227a] text-white font-semibold text-sm rounded-lg hover:shadow-lg hover:shadow-[#e8227a]/25 transition-all disabled:opacity-50"
             >
-              {pending ? "Signing in..." : "Sign In"}
-            </button>
+              Sign In
+            </SubmitButton>
           </form>
         </div>
       </div>

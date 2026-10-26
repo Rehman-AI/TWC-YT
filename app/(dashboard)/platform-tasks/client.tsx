@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState } from "react";
+import { useFormState } from "react-dom";
 import { markAsPosted } from "@/app/actions/platform-tasks";
+import { SubmitButton } from "@/components/submit-button";
 
 type PlatformTask = {
   id: string;
@@ -30,7 +32,7 @@ const platformEmoji: Record<string, string> = {
 
 export function PlatformTasksClient({ tasks }: { tasks: PlatformTask[] }) {
   const [postingId, setPostingId] = useState<string | null>(null);
-  const [state, formAction, pending] = useActionState(markAsPosted, null);
+  const [state, formAction] = useFormState(markAsPosted, null);
 
   const pendingTasks = tasks.filter((t) => t.status === "PENDING");
   const postedTasks = tasks.filter((t) => t.status === "POSTED");
@@ -94,13 +96,12 @@ export function PlatformTasksClient({ tasks }: { tasks: PlatformTask[] }) {
                         placeholder="Paste the URL where you posted it..."
                         className="flex-1 px-3 py-2 bg-[#1a1a1f] border border-white/[0.06] rounded-lg text-white text-sm focus:border-green-500/50 focus:outline-none"
                       />
-                      <button
-                        type="submit"
-                        disabled={pending}
+                      <SubmitButton
+                        pendingText="..."
                         className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-500 disabled:opacity-50 whitespace-nowrap"
                       >
-                        {pending ? "..." : "Done ✓"}
-                      </button>
+                        Done ✓
+                      </SubmitButton>
                       <button
                         type="button"
                         onClick={() => setPostingId(null)}
