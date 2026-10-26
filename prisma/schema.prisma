@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USERS & ROLES ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  roleId    String?
+  role      Role?    @relation(fields: [roleId], references: [id])
+  isBoss    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  scriptsWritten  Script[]       @relation("ScriptWriter")
+  videosAssigned  Script[]       @relation("VideoMaker")
+  videosCreated   Video[]
+  platformTasks   PlatformTask[]
+  activityLogs    ActivityLog[]
+  channelsCreated Channel[]
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String[] // Array of permission strings
+  createdAt   DateTime @default(now())
+
+  users User[]
+}
+
+// All available permissions (stored as strings in Role.permissions):
+// "manage_roles"      - create/edit roles (boss only)
+// "manage_members"    - create/edit/delete members (boss only)
+// "manage_channels"   - create/edit channels
+// "delete_channels"   - delete channels (boss only)
+// "assign_tasks"      - assign tasks to people (manager)
+// "write_scripts"     - write and assign scripts
+// "make_videos"       - see assigned scripts, paste capcut links
+// "post_youtube"      - post to YouTube
+// "post_tiktok"       - post to TikTok
+// "post_facebook"     - post to Facebook
+// "post_snapchat"     - post to Snapchat
+// "post_instagram"    - post to Instagram
+// "view_dashboard"    - see dashboard with progress
+// "view_all_progress" - see everyone's progress (boss/manager)
+
+// ─── CHANNELS ───────────────────────────────────────────────────
+
+model Channel {
+  id          String   @id @default(cuid())
+  name        String
+  idea        String?  @db.Text
+  videoLength String   @default("1 min") // "1 min", "5 min", "30 min", "1 hr", "2 hr"
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  platforms ChannelPlatform[]
+  scripts   Script[]
+}
+
+model ChannelPlatform {
+  id             String @id @default(cuid())
+  channelId      String
+  channel        Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  platformName   String  // "youtube", "tiktok", "facebook", "snapchat", "instagram"
+  uploadsPerDay  Int     @default(1)
+
+  platformTasks PlatformTask[]
+
+  @@unique([channelId, platformName])
+}
+
+// ─── SCRIPTS ────────────────────────────────────────────────────
+
+model Script {
+  id           String   @id @default(cuid())
+  title        String
+  content      String   @db.Text
+  extraFields  Json?    // Array of {label, value} for extra boxes
+  channelId    String
+  channel      Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  writerId     String
+  writer       User     @relation("ScriptWriter", fields: [writerId], references: [id])
+  videoMakerId String?
+  videoMaker   User?    @relation("VideoMaker", fields: [videoMakerId], references: [id])
+  status       String   @default("DRAFT") // DRAFT, ASSIGNED, VIDEO_DONE
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  video Video?
+}
+
+// ─── VIDEOS ─────────────────────────────────────────────────────
+
+model Video {
+  id           String   @id @default(cuid())
+  scriptId     String   @unique
+  script       Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  capCutLink   String   @db.Text
+  videoMakerId String
+  videoMaker   User     @relation(fields: [videoMakerId], references: [id])
+  createdAt    DateTime @default(now())
+
+  platformTasks PlatformTask[]
+}
+
+// ─── PLATFORM TASKS ─────────────────────────────────────────────
+// Auto-created when video maker pastes CapCut link
+// One task per enabled platform for that channel
+
+model PlatformTask {
+  id                String          @id @default(cuid())
+  videoId           String
+  video             Video           @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  channelPlatformId String
+  channelPlatform   ChannelPlatform @relation(fields: [channelPlatformId], references: [id], onDelete: Cascade)
+  assignedToId      String?
+  assignedTo        User?           @relation(fields: [assignedToId], references: [id])
+  status            String          @default("PENDING") // PENDING, POSTED
+  postedUrl         String?         @db.Text
+  postedAt          DateTime?
+  createdAt         DateTime        @default(now())
+}
+
+// ─── ACTIVITY LOG ───────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // e.g. "CREATED_CHANNEL", "SUBMITTED_SCRIPT", "POSTED_VIDEO"
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+}
