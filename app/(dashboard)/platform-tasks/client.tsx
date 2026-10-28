@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormState } from "react-dom";
 import { markAsPosted, updatePostedLink, getChannelVideoMatrix } from "@/app/actions/platform-tasks";
 import { SubmitButton } from "@/components/submit-button";
-import { Check, Clock, ExternalLink, Edit2, X, Film, Share2 } from "lucide-react";
+import { Check, Clock, ExternalLink, Edit2, X, Film, Share2, History, Info } from "lucide-react";
 import { useLiveSync } from "@/hooks/use-live-sync";
 
 type MatrixData = Awaited<ReturnType<typeof getChannelVideoMatrix>>;
@@ -36,6 +36,15 @@ export function PlatformTasksClient({ initialData }: { initialData: MatrixData }
     videoTitle: string;
     platformName: string;
     postedUrl: string;
+  } | null>(null);
+
+  const [auditTask, setAuditTask] = useState<{
+    videoTitle: string;
+    platformName: string;
+    postedByName: string | null;
+    postedAt: string | null;
+    postedUrl: string | null;
+    editHistory: unknown;
   } | null>(null);
 
   const [postState, postAction] = useFormState(markAsPosted, null);
@@ -174,6 +183,85 @@ export function PlatformTasksClient({ initialData }: { initialData: MatrixData }
                   <SubmitButton pendingText="Saving...">Update Link</SubmitButton>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Trail / History Modal */}
+      {auditTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-lg bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3.5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/80">
+              <div className="flex items-center gap-2">
+                <History className="w-3.5 h-3.5 text-purple-600" />
+                <h3 className="text-xs font-bold text-zinc-900">
+                  Publish & Edit Audit Log — {auditTask.platformName.toUpperCase()}
+                </h3>
+              </div>
+              <button onClick={() => setAuditTask(null)} className="text-zinc-400 hover:text-zinc-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-zinc-900 truncate">{auditTask.videoTitle}</h4>
+                <div className="text-[11px] text-zinc-500 mt-1 flex flex-wrap items-center gap-3">
+                  <span>
+                    Posted by: <strong className="text-zinc-800">{auditTask.postedByName || "Uploader"}</strong>
+                  </span>
+                  <span>
+                    Posted at: <strong className="text-zinc-800">{auditTask.postedAt ? new Date(auditTask.postedAt).toLocaleString() : "—"}</strong>
+                  </span>
+                </div>
+                {auditTask.postedUrl && (
+                  <div className="mt-2 text-[11px] bg-zinc-50 p-2 rounded border border-zinc-200 break-all">
+                    <span className="text-zinc-400 font-semibold block uppercase text-[9px]">Live Public URL</span>
+                    <a href={auditTask.postedUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                      {auditTask.postedUrl}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h5 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Detailed Action History</h5>
+                {Array.isArray(auditTask.editHistory) && auditTask.editHistory.length > 0 ? (
+                  <div className="border border-zinc-200 rounded-xl divide-y divide-zinc-100 overflow-hidden text-xs max-h-[220px] overflow-y-auto">
+                    {(auditTask.editHistory as any[]).map((h, idx) => (
+                      <div key={idx} className="p-2.5 bg-white space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-zinc-800">
+                            {h.action === "POSTED" ? "🚀 First Uploaded" : "✏️ Link Updated"} by{" "}
+                            <span className="text-pink-600">{h.performedByName || "Team Member"}</span>
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            {h.performedAt ? new Date(h.performedAt).toLocaleString() : ""}
+                          </span>
+                        </div>
+                        {h.details && <p className="text-[10px] text-zinc-600 font-mono break-all">{h.details}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-zinc-50 rounded-lg text-center text-xs text-zinc-400 border border-zinc-200/60">
+                    No edit history recorded yet. Initial upload by {auditTask.postedByName || "uploader"}.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => setAuditTask(null)}
+                  className="px-3 py-1.5 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 text-xs font-semibold rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -349,6 +437,22 @@ export function PlatformTasksClient({ initialData }: { initialData: MatrixData }
                                       <Edit2 className="w-2 h-2" />
                                     </button>
                                   )}
+                                  <button
+                                    onClick={() =>
+                                      setAuditTask({
+                                        videoTitle: vid.title,
+                                        platformName: plat.label,
+                                        postedByName: task.postedByName,
+                                        postedAt: task.postedAt,
+                                        postedUrl: task.postedUrl,
+                                        editHistory: task.editHistory,
+                                      })
+                                    }
+                                    className="text-[9px] text-zinc-400 hover:text-purple-600 flex items-center gap-0.5"
+                                    title="View audit history (who posted & edited)"
+                                  >
+                                    <History className="w-2.5 h-2.5" />
+                                  </button>
                                 </div>
                               </div>
                             </td>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useFormState } from "react-dom";
 import { createScript, updateScript } from "@/app/actions/scripts";
 import { SubmitButton } from "@/components/submit-button";
-import { Edit2, Plus, X, ExternalLink } from "lucide-react";
+import { Edit2, Plus, X, ExternalLink, Filter } from "lucide-react";
 import { useLiveSync } from "@/hooks/use-live-sync";
 
 type ExtraField = { label: string; value: string };
@@ -40,6 +40,11 @@ export function ScriptsClient({
 
   const [createExtraFields, setCreateExtraFields] = useState<ExtraField[]>([]);
   const [editExtraFields, setEditExtraFields] = useState<ExtraField[]>([]);
+  const [editStatus, setEditStatus] = useState<string>("DRAFT");
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [memberFilter, setMemberFilter] = useState<string>("ALL");
 
   const [createState, createAction] = useFormState(createScript, null);
   const [editState, editAction] = useFormState(updateScript, null);
@@ -53,9 +58,31 @@ export function ScriptsClient({
     VIDEO_DONE: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   };
 
+  const allMembers = useMemo(() => {
+    const map = new Map<string, string>();
+    scripts.forEach((s) => {
+      if (s.writer?.id) map.set(s.writer.id, s.writer.name);
+      if (s.videoMaker?.id) map.set(s.videoMaker.id, s.videoMaker.name);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [scripts]);
+
+  const filteredScripts = useMemo(() => {
+    return scripts.filter((s) => {
+      if (statusFilter !== "ALL" && s.status !== statusFilter) return false;
+      if (memberFilter !== "ALL") {
+        const isWriter = s.writer?.id === memberFilter;
+        const isMaker = s.videoMaker?.id === memberFilter;
+        if (!isWriter && !isMaker) return false;
+      }
+      return true;
+    });
+  }, [scripts, statusFilter, memberFilter]);
+
   const startEdit = (script: Script) => {
     setIsEditing(true);
     setShowForm(false);
+    setEditStatus(script.status);
     const extras = script.extraFields as ExtraField[] | null;
     setEditExtraFields(Array.isArray(extras) ? [...extras] : []);
   };
@@ -84,14 +111,63 @@ export function ScriptsClient({
       <div className="grid grid-cols-[300px_1fr] gap-4 min-h-[calc(100vh-180px)]">
         {/* Left Script List */}
         <div className="bg-white border border-zinc-200 shadow-xs rounded-xl flex flex-col overflow-hidden">
-          <div className="px-3.5 py-2.5 border-b border-zinc-100 text-xs font-bold text-zinc-700 bg-zinc-50/50 flex justify-between items-center">
-            <span>All Scripts ({scripts.length})</span>
+          <div className="p-2.5 border-b border-zinc-100 bg-zinc-50/50 space-y-2">
+            <div className="flex justify-between items-center text-xs font-bold text-zinc-700">
+              <span className="flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-zinc-400" />
+                Scripts ({filteredScripts.length}{filteredScripts.length !== scripts.length ? ` / ${scripts.length}` : ""})
+              </span>
+              {(statusFilter !== "ALL" || memberFilter !== "ALL") && (
+                <button
+                  onClick={() => {
+                    setStatusFilter("ALL");
+                    setMemberFilter("ALL");
+                  }}
+                  className="text-[10px] text-pink-600 hover:text-pink-700 font-semibold"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+              {(["ALL", "DRAFT", "ASSIGNED", "VIDEO_DONE"] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all whitespace-nowrap ${
+                    statusFilter === st
+                      ? "bg-zinc-900 text-white shadow-xs"
+                      : "bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100"
+                  }`}
+                >
+                  {st === "ALL" ? "All" : st === "VIDEO_DONE" ? "Video Done" : st.charAt(0) + st.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Member Filter Dropdown */}
+            <select
+              value={memberFilter}
+              onChange={(e) => setMemberFilter(e.target.value)}
+              className="w-full px-2 py-1 bg-white border border-zinc-200 rounded-md text-[11px] text-zinc-700 focus:outline-none focus:border-pink-500/50"
+            >
+              <option value="ALL">All Members</option>
+              {allMembers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {scripts.length === 0 ? (
-              <p className="text-xs text-zinc-400 p-4 text-center">No scripts yet.</p>
+            {filteredScripts.length === 0 ? (
+              <p className="text-xs text-zinc-400 p-4 text-center">No scripts match filters.</p>
             ) : (
-              scripts.map((s) => (
+              filteredScripts.map((s) => (
                 <div
                   key={s.id}
                   onClick={() => {
@@ -369,21 +445,49 @@ export function ScriptsClient({
                   ))}
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Video Maker Assignment</label>
-                  <select
-                    name="videoMakerId"
-                    defaultValue={selectedScript.videoMaker?.id || ""}
-                    className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
-                  >
-                    <option value="">Unassigned</option>
-                    {videoMakers.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Status</label>
+                    <select
+                      name="status"
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                    >
+                      <option value="DRAFT">Draft</option>
+                      <option value="ASSIGNED">Assigned</option>
+                      <option value="VIDEO_DONE">Video Done</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Video Maker</label>
+                    <select
+                      name="videoMakerId"
+                      defaultValue={selectedScript.videoMaker?.id || ""}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                    >
+                      <option value="">Unassigned</option>
+                      {videoMakers.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
+                {editStatus === "VIDEO_DONE" && !selectedScript.video && (
+                  <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-lg p-3 space-y-1">
+                    <label className="block text-[11px] font-semibold text-emerald-900">
+                      CapCut / Video Link <span className="text-emerald-600 font-normal">(Optional - creates video & platform tasks)</span>
+                    </label>
+                    <input
+                      name="capCutLink"
+                      placeholder="https://www.capcut.com/..."
+                      className="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-md text-zinc-900 text-xs focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                )}
 
                 <div className="flex gap-2 pt-2 justify-end">
                   <button

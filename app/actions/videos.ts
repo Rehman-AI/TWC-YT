@@ -7,16 +7,16 @@ import { revalidatePath } from "next/cache";
 
 export async function getAssignedScripts() {
   const session = await requireSession();
-  // Get scripts assigned to this video maker that don't have a video yet
+  const where = session.isBoss
+    ? { status: "ASSIGNED", video: null }
+    : { videoMakerId: session.id, status: "ASSIGNED", video: null };
+
   return db.script.findMany({
-    where: {
-      videoMakerId: session.id,
-      status: "ASSIGNED",
-      video: null,
-    },
+    where,
     include: {
       channel: { include: { platforms: true } },
       writer: { select: { name: true } },
+      videoMaker: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: "asc" }, // Oldest first (overdue first)
   });
@@ -24,13 +24,32 @@ export async function getAssignedScripts() {
 
 export async function getCompletedVideos() {
   const session = await requireSession();
+  const where = session.isBoss ? {} : { videoMakerId: session.id };
+
   return db.video.findMany({
-    where: { videoMakerId: session.id },
+    where,
     include: {
       script: { include: { channel: true } },
+      videoMaker: { select: { id: true, name: true } },
       platformTasks: { include: { channelPlatform: true } },
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getAllVideoMakers() {
+  const session = await requireSession();
+  if (!session.isBoss) return [];
+  return db.user.findMany({
+    where: {
+      OR: [
+        { isBoss: false },
+        { videosAssigned: { some: {} } },
+        { videosCreated: { some: {} } },
+      ],
+    },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
   });
 }
 

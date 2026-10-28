@@ -33,7 +33,8 @@ export async function getChannelVideoMatrix() {
               platformTasks: {
                 include: {
                   channelPlatform: true,
-                  assignedTo: { select: { name: true } },
+                  assignedTo: { select: { id: true, name: true } },
+                  postedBy: { select: { id: true, name: true } },
                 },
               },
             },
@@ -68,6 +69,8 @@ export async function getChannelVideoMatrix() {
             postedUrl: t.postedUrl,
             postedAt: t.postedAt ? t.postedAt.toISOString() : null,
             assignedToName: t.assignedTo?.name || null,
+            postedByName: t.postedBy?.name || t.assignedTo?.name || null,
+            editHistory: t.editHistory || null,
           })),
         })),
     })),
@@ -145,6 +148,18 @@ export async function markAsPosted(_prev: unknown, formData: FormData) {
   }
 
   try {
+    const actorName = session.isBoss ? "Sami" : session.name;
+    const initialHistory = [
+      {
+        action: "POSTED",
+        performedById: session.id,
+        performedByName: actorName,
+        performedAt: new Date().toISOString(),
+        details: `Initial post link: ${postedUrl.trim()}`,
+        url: postedUrl.trim(),
+      },
+    ];
+
     await db.platformTask.update({
       where: { id: taskId },
       data: {
@@ -152,6 +167,8 @@ export async function markAsPosted(_prev: unknown, formData: FormData) {
         postedUrl: postedUrl.trim(),
         postedAt: new Date(),
         assignedToId: session.id,
+        postedById: session.id,
+        editHistory: initialHistory,
       },
     });
 
@@ -192,10 +209,23 @@ export async function updatePostedLink(_prev: unknown, formData: FormData) {
   }
 
   try {
+    const actorName = session.isBoss ? "Sami" : session.name;
+    const currentHistory = Array.isArray(task.editHistory) ? [...(task.editHistory as Record<string, unknown>[])] : [];
+    currentHistory.push({
+      action: "EDITED_LINK",
+      performedById: session.id,
+      performedByName: actorName,
+      performedAt: new Date().toISOString(),
+      details: `Changed posted link from "${task.postedUrl || ""}" to "${postedUrl.trim()}"`,
+      previousUrl: task.postedUrl,
+      newUrl: postedUrl.trim(),
+    });
+
     await db.platformTask.update({
       where: { id: taskId },
       data: {
         postedUrl: postedUrl.trim(),
+        editHistory: currentHistory as any,
       },
     });
 

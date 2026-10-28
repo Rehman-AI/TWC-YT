@@ -21,12 +21,13 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  scriptsWritten  Script[]       @relation("ScriptWriter")
-  videosAssigned  Script[]       @relation("VideoMaker")
-  videosCreated   Video[]
-  platformTasks   PlatformTask[]
-  activityLogs    ActivityLog[]
-  channelsCreated Channel[]
+  scriptsWritten      Script[]       @relation("ScriptWriter")
+  videosAssigned      Script[]       @relation("VideoMaker")
+  videosCreated       Video[]
+  platformTasks       PlatformTask[] @relation("PlatformTaskAssignee")
+  platformTasksPosted PlatformTask[] @relation("PlatformTaskPoster")
+  activityLogs        ActivityLog[]
+  channelsCreated     Channel[]
 }
 
 model Role {
@@ -127,10 +128,13 @@ model PlatformTask {
   channelPlatformId String
   channelPlatform   ChannelPlatform @relation(fields: [channelPlatformId], references: [id], onDelete: Cascade)
   assignedToId      String?
-  assignedTo        User?           @relation(fields: [assignedToId], references: [id])
+  assignedTo        User?           @relation("PlatformTaskAssignee", fields: [assignedToId], references: [id])
+  postedById        String?
+  postedBy          User?           @relation("PlatformTaskPoster", fields: [postedById], references: [id])
   status            String          @default("PENDING") // PENDING, POSTED
   postedUrl         String?         @db.Text
   postedAt          DateTime?
+  editHistory       Json?           // Array of { action, performedById, performedByName, performedAt, details, previousUrl, newUrl }
   createdAt         DateTime        @default(now())
 }
 
