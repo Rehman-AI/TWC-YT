@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PendingMembersList } from "@/components/pending-members-list";
+import { WORK_ACTIONS } from "@/lib/activity";
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -19,7 +20,8 @@ export default async function DashboardPage() {
     pendingPlatformTasks,
     postedToday,
     recentActivity,
-    memberProgress,
+    pendingTasksList,
+    rawMemberProgress,
   ] = await Promise.all([
     db.channel.count(),
     db.script.count(),
@@ -29,9 +31,18 @@ export default async function DashboardPage() {
       where: { status: "POSTED", postedAt: { gte: todayStart, lte: todayEnd } },
     }),
     db.activityLog.findMany({
+      where: { action: { in: [...WORK_ACTIONS] } },
       include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 10,
+    }),
+    db.platformTask.findMany({
+      where: { status: "PENDING" },
+      select: {
+        id: true,
+        channelPlatform: { select: { platformName: true } },
+        assignedToId: true,
+      },
     }),
     // Per-member progress
     db.user.findMany({
@@ -39,7 +50,7 @@ export default async function DashboardPage() {
       select: {
         id: true,
         name: true,
-        role: { select: { name: true } },
+        role: { select: { name: true, permissions: true } },
         scriptsWritten: {
           where: { createdAt: { gte: todayStart } },
           select: { id: true },
@@ -57,19 +68,46 @@ export default async function DashboardPage() {
           select: { id: true },
         },
       },
+      orderBy: { name: "asc" },
     }),
   ]);
 
+  // Compute accurate pending and done today counts for each member (including platform uploaders)
+  const memberProgress = rawMemberProgress.map((member) => {
+    const pendingScripts = member.videosAssigned.length;
+    const perms = member.role?.permissions || [];
+    const pendingPlatforms = pendingTasksList.filter((task) => {
+      if (task.assignedToId === member.id) return true;
+      const permName = `post_${task.channelPlatform.platformName}`;
+      return perms.includes(permName);
+    }).length;
+
+    const totalPending = pendingScripts + pendingPlatforms;
+    const totalDone =
+      member.scriptsWritten.length +
+      member.videosCreated.length +
+      member.platformTasks.length;
+
+    return {
+      id: member.id,
+      name: member.name,
+      role: member.role,
+      pendingCount: totalPending,
+      doneTodayCount: totalDone,
+    };
+  });
+
   const actionColors: Record<string, string> = {
     CREATED_CHANNEL: "bg-blue-500",
+    UPDATED_CHANNEL: "bg-sky-500",
     CREATED_SCRIPT: "bg-purple-500",
-    ASSIGNED_SCRIPT: "bg-yellow-500",
-    SUBMITTED_VIDEO: "bg-green-500",
+    ASSIGNED_SCRIPT: "bg-amber-500",
+    UPDATED_SCRIPT: "bg-indigo-500",
+    SUBMITTED_VIDEO: "bg-emerald-500",
+    UPDATED_VIDEO: "bg-teal-500",
     POSTED_VIDEO: "bg-pink-500",
-    CREATED_MEMBER: "bg-cyan-500",
-    CREATED_ROLE: "bg-indigo-500",
-    DELETED_CHANNEL: "bg-red-500",
-    default: "bg-zinc-500",
+    UPDATED_POST: "bg-rose-500",
+    default: "bg-zinc-400",
   };
 
   return (
@@ -77,7 +115,7 @@ export default async function DashboardPage() {
       <div className="flex items-end justify-between mb-6">
         <div>
           <h1 className="text-[22px] font-bold text-zinc-900 mb-0.5">
-            Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {session.name.split(" ")[0]}
+            Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {(session.isBoss ? "Sami" : session.name).split(" ")[0]}
           </h1>
           <p className="text-[13px] text-zinc-500">Here&apos;s what&apos;s happening across your channels today.</p>
         </div>

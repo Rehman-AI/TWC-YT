@@ -3,19 +3,21 @@
 import { useState } from "react";
 import { MemberDetailModal } from "@/components/member-detail-modal";
 import { ChevronRight } from "lucide-react";
+import { useLiveSync } from "@/hooks/use-live-sync";
 
 type MemberProgressItem = {
   id: string;
   name: string;
-  role: { name: string } | null;
-  scriptsWritten: { id: string }[];
-  videosAssigned: { id: string }[];
-  videosCreated: { id: string }[];
-  platformTasks: { id: string }[];
+  role: { name: string; permissions?: string[] } | null;
+  pendingCount: number;
+  doneTodayCount: number;
 };
 
 export function PendingMembersList({ members }: { members: MemberProgressItem[] }) {
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string } | null>(null);
+
+  // Auto-sync every 4.5 seconds when active
+  useLiveSync(4500);
 
   if (members.length === 0) {
     return (
@@ -29,12 +31,6 @@ export function PendingMembersList({ members }: { members: MemberProgressItem[] 
     <>
       <div className="space-y-2">
         {members.map((member) => {
-          const pendingScripts = member.videosAssigned.length;
-          const scriptsToday = member.scriptsWritten.length;
-          const videosToday = member.videosCreated.length;
-          const postedToday = member.platformTasks.length;
-          const totalDone = scriptsToday + videosToday + postedToday;
-
           return (
             <div
               key={member.id}
@@ -48,19 +44,23 @@ export function PendingMembersList({ members }: { members: MemberProgressItem[] 
                 <div className="text-xs font-semibold text-zinc-900 group-hover:text-pink-600 transition-colors flex items-center gap-1.5">
                   {member.name}
                   <span className="text-[10px] text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity font-normal">
-                    (click to view today)
+                    (click to view progress)
                   </span>
                 </div>
                 <div className="text-[11px] text-zinc-500">{member.role?.name || "No role"}</div>
               </div>
               <div className="flex items-center gap-4 text-[11px]">
                 <div className="text-center">
-                  <div className="font-semibold text-amber-600">{pendingScripts}</div>
-                  <div className="text-zinc-400">Pending</div>
+                  <div className={`font-semibold ${member.pendingCount > 0 ? "text-amber-600" : "text-zinc-400"}`}>
+                    {member.pendingCount}
+                  </div>
+                  <div className="text-zinc-400 text-[10px]">Pending</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold text-emerald-600">{totalDone}</div>
-                  <div className="text-zinc-400">Done Today</div>
+                  <div className={`font-semibold ${member.doneTodayCount > 0 ? "text-emerald-600" : "text-zinc-400"}`}>
+                    {member.doneTodayCount}
+                  </div>
+                  <div className="text-zinc-400 text-[10px]">Done Today</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-pink-600 group-hover:translate-x-0.5 transition-all" />
               </div>

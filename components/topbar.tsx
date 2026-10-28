@@ -17,7 +17,7 @@ export function Topbar({ session }: { session: SessionUser }) {
       <div className="flex-1" />
 
       <div className="text-xs text-zinc-500 font-medium">
-        <span className="text-zinc-800 font-semibold">{session.name}</span> · {session.isBoss ? "Boss" : "Member"}
+        <span className="text-zinc-800 font-semibold">{session.isBoss ? "Sami" : session.name}</span> · {session.isBoss ? "Boss" : "Member"}
       </div>
 
       <form action={logoutAction}>

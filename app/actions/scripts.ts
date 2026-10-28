@@ -84,3 +84,56 @@ export async function assignScript(scriptId: string, videoMakerId: string) {
   revalidatePath("/scripts");
   revalidatePath("/videos");
 }
+
+export async function updateScript(_prev: unknown, formData: FormData) {
+  await requirePermission("write_scripts");
+  const session = await requireSession();
+
+  const id = formData.get("id") as string;
+  const title = formData.get("title") as string;
+  const content = formData.get("content") as string;
+  const channelId = formData.get("channelId") as string;
+  const videoMakerId = formData.get("videoMakerId") as string;
+
+  const extraFieldsJson = formData.get("extraFields") as string;
+  let extraFields = null;
+  if (extraFieldsJson) {
+    try { extraFields = JSON.parse(extraFieldsJson); } catch { /* ignore */ }
+  }
+
+  if (!id) return { error: "Script ID is required" };
+  if (!title?.trim()) return { error: "Title is required" };
+  if (!content?.trim()) return { error: "Script content is required" };
+
+  try {
+    const existing = await db.script.findUnique({ where: { id } });
+    if (!existing) return { error: "Script not found" };
+
+    // Update status if videoMaker is assigned and status was draft
+    const newStatus =
+      existing.status === "DRAFT" && videoMakerId
+        ? "ASSIGNED"
+        : existing.status;
+
+    await db.script.update({
+      where: { id },
+      data: {
+        title: title.trim(),
+        content: content.trim(),
+        channelId: channelId || existing.channelId,
+        videoMakerId: videoMakerId || null,
+        extraFields,
+        status: newStatus,
+      },
+    });
+
+    await logActivity("UPDATED_SCRIPT", `Updated script: ${title.trim()}`);
+    revalidatePath("/scripts");
+    revalidatePath("/videos");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+

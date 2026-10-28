@@ -8,7 +8,13 @@ import { revalidatePath } from "next/cache";
 export async function getChannels() {
   return db.channel.findMany({
     include: {
-      platforms: true,
+      platforms: {
+        include: {
+          platformTasks: {
+            select: { id: true, status: true },
+          },
+        },
+      },
       createdBy: { select: { name: true } },
       _count: { select: { scripts: true } },
     },

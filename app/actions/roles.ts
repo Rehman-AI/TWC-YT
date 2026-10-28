@@ -26,7 +26,6 @@ export async function createRole(_prev: unknown, formData: FormData) {
     await db.role.create({
       data: { name: name.trim(), permissions },
     });
-    await logActivity("CREATED_ROLE", `Created role: ${name}`);
     revalidatePath("/roles");
     return { success: true };
   } catch (e: unknown) {
@@ -50,7 +49,6 @@ export async function updateRole(_prev: unknown, formData: FormData) {
       where: { id },
       data: { name: name.trim(), permissions },
     });
-    await logActivity("UPDATED_ROLE", `Updated role: ${name}`);
     revalidatePath("/roles");
     return { success: true };
   } catch (e: unknown) {
@@ -62,8 +60,6 @@ export async function updateRole(_prev: unknown, formData: FormData) {
 export async function deleteRole(id: string) {
   await requirePermission("manage_roles");
 
-  const role = await db.role.findUnique({ where: { id } });
   await db.role.delete({ where: { id } });
-  await logActivity("DELETED_ROLE", `Deleted role: ${role?.name}`);
   revalidatePath("/roles");
 }

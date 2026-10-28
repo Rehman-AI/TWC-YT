@@ -1,10 +1,12 @@
 import { requirePermission } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { WORK_ACTIONS } from "@/lib/activity";
 
 export default async function ActivityPage() {
   await requirePermission("view_all_progress");
 
   const logs = await db.activityLog.findMany({
+    where: { action: { in: [...WORK_ACTIONS] } },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
     take: 100,
@@ -12,18 +14,14 @@ export default async function ActivityPage() {
 
   const actionColors: Record<string, string> = {
     CREATED_CHANNEL: "bg-blue-500",
-    UPDATED_CHANNEL: "bg-blue-400",
-    DELETED_CHANNEL: "bg-red-500",
+    UPDATED_CHANNEL: "bg-sky-500",
     CREATED_SCRIPT: "bg-purple-500",
-    ASSIGNED_SCRIPT: "bg-yellow-500",
-    SUBMITTED_VIDEO: "bg-green-500",
+    ASSIGNED_SCRIPT: "bg-amber-500",
+    UPDATED_SCRIPT: "bg-indigo-500",
+    SUBMITTED_VIDEO: "bg-emerald-500",
+    UPDATED_VIDEO: "bg-teal-500",
     POSTED_VIDEO: "bg-pink-500",
-    CREATED_MEMBER: "bg-cyan-500",
-    UPDATED_MEMBER: "bg-cyan-400",
-    DELETED_MEMBER: "bg-red-400",
-    CREATED_ROLE: "bg-indigo-500",
-    UPDATED_ROLE: "bg-indigo-400",
-    DELETED_ROLE: "bg-red-400",
+    UPDATED_POST: "bg-rose-500",
   };
 
   return (

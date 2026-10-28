@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useFormState } from "react-dom";
-import { createScript } from "@/app/actions/scripts";
+import { createScript, updateScript } from "@/app/actions/scripts";
 import { SubmitButton } from "@/components/submit-button";
+import { Edit2, Plus, X, ExternalLink } from "lucide-react";
+import { useLiveSync } from "@/hooks/use-live-sync";
 
 type ExtraField = { label: string; value: string };
 
@@ -33,57 +35,82 @@ export function ScriptsClient({
   videoMakers: VideoMaker[];
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [extraFields, setExtraFields] = useState<ExtraField[]>([]);
-  const [state, formAction] = useFormState(createScript, null);
+  const [isEditing, setIsEditing] = useState(false);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
 
+  const [createExtraFields, setCreateExtraFields] = useState<ExtraField[]>([]);
+  const [editExtraFields, setEditExtraFields] = useState<ExtraField[]>([]);
+
+  const [createState, createAction] = useFormState(createScript, null);
+  const [editState, editAction] = useFormState(updateScript, null);
+
+  // Auto-sync every 4.5 seconds
+  useLiveSync(4500);
+
   const statusColors: Record<string, string> = {
-    DRAFT: "bg-yellow-500/10 text-yellow-400",
-    ASSIGNED: "bg-blue-500/10 text-blue-400",
-    VIDEO_DONE: "bg-green-500/10 text-green-400",
+    DRAFT: "bg-amber-50 text-amber-700 border border-amber-200",
+    ASSIGNED: "bg-blue-50 text-blue-700 border border-blue-200",
+    VIDEO_DONE: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  };
+
+  const startEdit = (script: Script) => {
+    setIsEditing(true);
+    setShowForm(false);
+    const extras = script.extraFields as ExtraField[] | null;
+    setEditExtraFields(Array.isArray(extras) ? [...extras] : []);
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900">Script Board</h1>
-          <p className="text-sm text-zinc-500">Write scripts and assign to video makers</p>
+          <h1 className="text-lg font-bold text-zinc-900">Script Board</h1>
+          <p className="text-xs text-zinc-500">Write scripts and assign to video makers</p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setSelectedScript(null); }}
-          className="px-4 py-2 bg-gradient-to-r from-[#8c0f60] to-[#e8227a] text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:shadow-pink-500/25 transition-all"
+          onClick={() => {
+            setShowForm(true);
+            setIsEditing(false);
+            setSelectedScript(null);
+            setCreateExtraFields([]);
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#8c0f60] to-[#e8227a] text-white text-xs font-semibold rounded-lg hover:shadow-md hover:shadow-pink-500/20 transition-all"
         >
-          + New Script
+          <Plus className="w-3.5 h-3.5" />
+          New Script
         </button>
       </div>
 
-      <div className="grid grid-cols-[340px_1fr] gap-4 min-h-[calc(100vh-180px)]">
-        {/* Script List */}
-        <div className="bg-white border border-zinc-200 shadow-sm rounded-xl flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-100 text-xs font-bold text-zinc-700 bg-zinc-50/50">
-            All Scripts ({scripts.length})
+      <div className="grid grid-cols-[300px_1fr] gap-4 min-h-[calc(100vh-180px)]">
+        {/* Left Script List */}
+        <div className="bg-white border border-zinc-200 shadow-xs rounded-xl flex flex-col overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-zinc-100 text-xs font-bold text-zinc-700 bg-zinc-50/50 flex justify-between items-center">
+            <span>All Scripts ({scripts.length})</span>
           </div>
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {scripts.length === 0 ? (
-              <p className="text-sm text-zinc-500 p-4">No scripts yet.</p>
+              <p className="text-xs text-zinc-400 p-4 text-center">No scripts yet.</p>
             ) : (
               scripts.map((s) => (
                 <div
                   key={s.id}
-                  onClick={() => { setSelectedScript(s); setShowForm(false); }}
-                  className={`p-3 rounded-lg cursor-pointer transition-all mb-1 border ${
-                    selectedScript?.id === s.id
+                  onClick={() => {
+                    setSelectedScript(s);
+                    setShowForm(false);
+                    setIsEditing(false);
+                  }}
+                  className={`p-2.5 rounded-lg cursor-pointer transition-all border ${
+                    selectedScript?.id === s.id && !showForm
                       ? "bg-pink-50/80 border-pink-200"
                       : "border-transparent hover:bg-zinc-50"
                   }`}
                 >
-                  <div className="text-[13px] font-semibold text-zinc-900 mb-1">{s.title}</div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${statusColors[s.status]}`}>
+                  <div className="text-xs font-bold text-zinc-900 mb-0.5 truncate">{s.title}</div>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <span className={`px-1.5 py-0.2 rounded font-semibold ${statusColors[s.status] || "bg-zinc-100 text-zinc-600"}`}>
                       {s.status}
                     </span>
-                    <span className="text-zinc-500">{s.channel.name}</span>
+                    <span className="text-zinc-500 truncate">{s.channel.name}</span>
                     {s.videoMaker && <span className="text-zinc-600 font-medium">→ {s.videoMaker.name}</span>}
                   </div>
                 </div>
@@ -92,138 +119,352 @@ export function ScriptsClient({
           </div>
         </div>
 
-        {/* Right Panel — Form or Detail */}
-        <div className="bg-white border border-zinc-200 shadow-sm rounded-xl flex flex-col overflow-hidden">
+        {/* Right Panel: Form, Edit Mode, or Viewer */}
+        <div className="bg-white border border-zinc-200 shadow-xs rounded-xl flex flex-col overflow-hidden">
+          {/* Create New Script Form */}
           {showForm ? (
-            <div className="p-5 overflow-y-auto">
-              <h3 className="text-sm font-bold text-zinc-900 mb-4">New Script</h3>
-              {state?.error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3 mb-4">{state.error}</div>
+            <div className="p-4 overflow-y-auto">
+              <div className="flex items-center justify-between mb-3 border-b border-zinc-100 pb-2">
+                <h3 className="text-xs font-bold text-zinc-900">New Script</h3>
+                <button onClick={() => setShowForm(false)} className="text-zinc-400 hover:text-zinc-700">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {createState?.error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg p-2.5 mb-3">
+                  {createState.error}
+                </div>
               )}
-              <form action={async (formData) => {
-                formData.set("extraFields", JSON.stringify(extraFields));
-                await formAction(formData);
-                if (!state?.error) { setShowForm(false); setExtraFields([]); }
-              }} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form
+                action={async (formData) => {
+                  formData.set("extraFields", JSON.stringify(createExtraFields));
+                  await createAction(formData);
+                  if (!createState?.error) {
+                    setShowForm(false);
+                    setCreateExtraFields([]);
+                  }
+                }}
+                className="space-y-3"
+              >
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-zinc-600 mb-1">Title</label>
-                    <input name="title" required placeholder="Script title" className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none" />
+                    <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Title</label>
+                    <input
+                      name="title"
+                      required
+                      placeholder="Script title"
+                      className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-zinc-600 mb-1">Channel</label>
-                    <select name="channelId" required className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none">
+                    <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Channel</label>
+                    <select
+                      name="channelId"
+                      required
+                      className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                    >
                       <option value="">Select channel</option>
-                      {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {channels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-medium text-zinc-600 mb-1">Script Content</label>
-                  <textarea name="content" required rows={10} placeholder="Paste or write your script here... No limit." className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none resize-y font-mono" />
+                  <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Script Content</label>
+                  <textarea
+                    name="content"
+                    required
+                    rows={10}
+                    placeholder="Paste or write your script here... No limit."
+                    className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none resize-y font-mono leading-relaxed"
+                  />
                 </div>
 
                 {/* Extra Fields */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-medium text-zinc-600">Extra Fields</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Extra Fields</label>
                     <button
                       type="button"
-                      onClick={() => setExtraFields([...extraFields, { label: "", value: "" }])}
-                      className="text-xs text-pink-600 hover:text-pink-700 font-semibold"
+                      onClick={() => setCreateExtraFields([...createExtraFields, { label: "", value: "" }])}
+                      className="text-[11px] text-pink-600 hover:text-pink-700 font-semibold"
                     >
                       + Add Field
                     </button>
                   </div>
-                  {extraFields.map((f, i) => (
+                  {createExtraFields.map((f, i) => (
                     <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2 mb-2">
                       <input
                         placeholder="Label"
                         value={f.label}
                         onChange={(e) => {
-                          const n = [...extraFields];
+                          const n = [...createExtraFields];
                           n[i].label = e.target.value;
-                          setExtraFields(n);
+                          setCreateExtraFields(n);
                         }}
-                        className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                        className="px-2 py-1 bg-zinc-50/50 border border-zinc-200 rounded-md text-zinc-900 text-xs focus:bg-white focus:outline-none"
                       />
                       <input
                         placeholder="Value"
                         value={f.value}
                         onChange={(e) => {
-                          const n = [...extraFields];
+                          const n = [...createExtraFields];
                           n[i].value = e.target.value;
-                          setExtraFields(n);
+                          setCreateExtraFields(n);
                         }}
-                        className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                        className="px-2 py-1 bg-zinc-50/50 border border-zinc-200 rounded-md text-zinc-900 text-xs focus:bg-white focus:outline-none"
                       />
                       <button
                         type="button"
-                        onClick={() => setExtraFields(extraFields.filter((_, j) => j !== i))}
-                        className="text-xs text-zinc-400 hover:text-red-600 px-2"
-                      >✕</button>
+                        onClick={() => setCreateExtraFields(createExtraFields.filter((_, j) => j !== i))}
+                        className="text-xs text-zinc-400 hover:text-red-600 px-1"
+                      >
+                        ✕
+                      </button>
                     </div>
                   ))}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-zinc-600 mb-1">Assign to Video Maker (optional)</label>
-                  <select name="videoMakerId" className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 text-sm focus:bg-white focus:border-pink-500/50 focus:outline-none">
+                  <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                    Assign to Video Maker (optional)
+                  </label>
+                  <select
+                    name="videoMakerId"
+                    className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                  >
                     <option value="">Don&apos;t assign yet</option>
-                    {videoMakers.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                    {videoMakers.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-800"
+                  >
+                    Cancel
+                  </button>
                   <SubmitButton pendingText="Saving...">Save Script</SubmitButton>
-                  <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-800">Cancel</button>
+                </div>
+              </form>
+            </div>
+          ) : isEditing && selectedScript ? (
+            /* Edit Script Mode */
+            <div className="p-4 overflow-y-auto">
+              <div className="flex items-center justify-between mb-3 border-b border-zinc-100 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <Edit2 className="w-3.5 h-3.5 text-pink-600" />
+                  <h3 className="text-xs font-bold text-zinc-900">Edit Script</h3>
+                </div>
+                <button onClick={() => setIsEditing(false)} className="text-zinc-400 hover:text-zinc-700">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {editState?.error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg p-2.5 mb-3">
+                  {editState.error}
+                </div>
+              )}
+
+              <form
+                action={async (formData) => {
+                  formData.set("extraFields", JSON.stringify(editExtraFields));
+                  await editAction(formData);
+                  setIsEditing(false);
+                }}
+                className="space-y-3"
+              >
+                <input type="hidden" name="id" value={selectedScript.id} />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Title</label>
+                    <input
+                      name="title"
+                      required
+                      defaultValue={selectedScript.title}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Channel</label>
+                    <select
+                      name="channelId"
+                      defaultValue={selectedScript.channel.id}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                    >
+                      {channels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Script Content</label>
+                  <textarea
+                    name="content"
+                    required
+                    rows={10}
+                    defaultValue={selectedScript.content}
+                    className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none resize-y font-mono leading-relaxed"
+                  />
+                </div>
+
+                {/* Extra Fields */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-semibold text-zinc-700">Extra Fields</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditExtraFields([...editExtraFields, { label: "", value: "" }])}
+                      className="text-[11px] text-pink-600 hover:text-pink-700 font-semibold"
+                    >
+                      + Add Field
+                    </button>
+                  </div>
+                  {editExtraFields.map((f, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2 mb-2">
+                      <input
+                        placeholder="Label"
+                        value={f.label}
+                        onChange={(e) => {
+                          const n = [...editExtraFields];
+                          n[i].label = e.target.value;
+                          setEditExtraFields(n);
+                        }}
+                        className="px-2 py-1 bg-zinc-50/50 border border-zinc-200 rounded-md text-zinc-900 text-xs focus:bg-white focus:outline-none"
+                      />
+                      <input
+                        placeholder="Value"
+                        value={f.value}
+                        onChange={(e) => {
+                          const n = [...editExtraFields];
+                          n[i].value = e.target.value;
+                          setEditExtraFields(n);
+                        }}
+                        className="px-2 py-1 bg-zinc-50/50 border border-zinc-200 rounded-md text-zinc-900 text-xs focus:bg-white focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditExtraFields(editExtraFields.filter((_, j) => j !== i))}
+                        className="text-xs text-zinc-400 hover:text-red-600 px-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-700 mb-1">Video Maker Assignment</label>
+                  <select
+                    name="videoMakerId"
+                    defaultValue={selectedScript.videoMaker?.id || ""}
+                    className="w-full px-2.5 py-1.5 bg-zinc-50/50 border border-zinc-200 rounded-lg text-zinc-900 text-xs focus:bg-white focus:border-pink-500/50 focus:outline-none"
+                  >
+                    <option value="">Unassigned</option>
+                    {videoMakers.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex gap-2 pt-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-800"
+                  >
+                    Cancel
+                  </button>
+                  <SubmitButton pendingText="Updating...">Update Script</SubmitButton>
                 </div>
               </form>
             </div>
           ) : selectedScript ? (
-            <div className="p-5 overflow-y-auto">
-              <div className="flex items-start justify-between mb-4">
+            /* Script Details View */
+            <div className="p-4 overflow-y-auto space-y-3">
+              <div className="flex items-start justify-between gap-3 border-b border-zinc-100 pb-3">
                 <div>
-                  <h2 className="text-lg font-bold text-zinc-900">{selectedScript.title}</h2>
-                  <div className="text-xs text-zinc-500 mt-1">
-                    {selectedScript.channel.name} · by <span className="font-medium text-zinc-700">{selectedScript.writer.name}</span>
-                    {selectedScript.videoMaker && ` · assigned to ${selectedScript.videoMaker.name}`}
+                  <h2 className="text-sm font-bold text-zinc-900">{selectedScript.title}</h2>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">
+                    Channel: <span className="font-semibold text-zinc-800">{selectedScript.channel.name}</span> · Writer:{" "}
+                    <span className="font-medium text-zinc-700">{selectedScript.writer.name}</span>
+                    {selectedScript.videoMaker && ` · Assigned to ${selectedScript.videoMaker.name}`}
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${statusColors[selectedScript.status]}`}>
-                  {selectedScript.status}
-                </span>
+                <div className="flex items-center gap-2 flex-none">
+                  <button
+                    onClick={() => startEdit(selectedScript)}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-zinc-600 hover:text-zinc-900 px-2 py-1 rounded-md border border-zinc-200 hover:bg-zinc-50 transition-colors"
+                  >
+                    <Edit2 className="w-3 h-3" /> Edit
+                  </button>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${statusColors[selectedScript.status]}`}>
+                    {selectedScript.status}
+                  </span>
+                </div>
               </div>
+
               {selectedScript.video && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4">
-                  <div className="text-xs font-semibold text-emerald-700 mb-1">CapCut Video Link</div>
-                  <a href={selectedScript.video.capCutLink} target="_blank" rel="noreferrer" className="text-sm text-pink-600 hover:underline break-all">
-                    {selectedScript.video.capCutLink}
-                  </a>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-bold text-emerald-700 uppercase">CapCut Video Link</div>
+                    <a
+                      href={selectedScript.video.capCutLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-600 hover:underline break-all font-medium inline-flex items-center gap-1 mt-0.5"
+                    >
+                      {selectedScript.video.capCutLink} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                 </div>
               )}
-              <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-4">
-                <pre className="text-sm text-zinc-800 whitespace-pre-wrap font-mono leading-relaxed">{selectedScript.content}</pre>
+
+              <div className="bg-zinc-50/60 border border-zinc-200 rounded-lg p-3">
+                <pre className="text-xs text-zinc-800 whitespace-pre-wrap font-mono leading-relaxed">
+                  {selectedScript.content}
+                </pre>
               </div>
+
               {(() => {
                 const extras = selectedScript.extraFields as ExtraField[] | null;
                 if (!extras || !Array.isArray(extras) || extras.length === 0) return null;
                 return (
-                  <div className="mt-4 space-y-2">
-                    <h4 className="text-xs font-bold text-zinc-700">Extra Fields</h4>
-                    {extras.map((f: ExtraField, i: number) => (
-                      <div key={i} className="flex gap-2 text-sm">
-                        <span className="text-zinc-500 font-medium">{String(f.label)}:</span>
-                        <span className="text-zinc-800">{String(f.value)}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-1.5 pt-1">
+                    <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Extra Fields</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {extras.map((f: ExtraField, i: number) => (
+                        <div key={i} className="bg-zinc-50 border border-zinc-200 rounded-md p-2">
+                          <span className="text-[10px] font-semibold text-zinc-400 block uppercase">{String(f.label)}</span>
+                          <span className="text-zinc-800 font-medium text-xs">{String(f.value)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-zinc-500">Select a script to view, or create a new one.</p>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <p className="text-xs text-zinc-400">Select a script from the left to view, or click &quot;+ New Script&quot;.</p>
             </div>
           )}
         </div>

@@ -100,3 +100,40 @@ export async function submitVideo(_prev: unknown, formData: FormData) {
     return { error: e instanceof Error ? e.message : "Unknown error" };
   }
 }
+
+export async function updateVideoLink(_prev: unknown, formData: FormData) {
+  await requirePermission("make_videos");
+  const session = await requireSession();
+
+  const videoId = formData.get("videoId") as string;
+  const capCutLink = formData.get("capCutLink") as string;
+
+  if (!videoId) return { error: "Video ID is required" };
+  if (!capCutLink?.trim()) return { error: "CapCut link is required" };
+
+  try {
+    const video = await db.video.findUnique({
+      where: { id: videoId },
+      include: { script: true },
+    });
+
+    if (!video) return { error: "Video not found" };
+    if (video.videoMakerId !== session.id && !session.isBoss) {
+      return { error: "You cannot edit this video" };
+    }
+
+    await db.video.update({
+      where: { id: videoId },
+      data: { capCutLink: capCutLink.trim() },
+    });
+
+    await logActivity("UPDATED_VIDEO", `Updated CapCut link for: ${video.script.title}`);
+    revalidatePath("/videos");
+    revalidatePath("/platform-tasks");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Unknown error" };
+  }
+}
+

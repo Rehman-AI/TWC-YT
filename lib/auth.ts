@@ -61,7 +61,28 @@ export async function getSession(): Promise<SessionUser | null> {
 
   try {
     const decoded = verify(token, JWT_SECRET) as SessionUser;
-    return decoded;
+    if (!decoded?.id) return null;
+
+    const user = await db.user.findUnique({
+      where: { id: decoded.id },
+      include: { role: true },
+    });
+
+    if (user) {
+      return {
+        id: user.id,
+        name: user.isBoss ? "Sami" : user.name,
+        email: user.email,
+        isBoss: user.isBoss,
+        roleId: user.roleId,
+        permissions: user.role?.permissions ?? [],
+      };
+    }
+
+    return {
+      ...decoded,
+      name: decoded.isBoss ? "Sami" : decoded.name,
+    };
   } catch {
     return null;
   }

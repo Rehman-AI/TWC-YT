@@ -35,7 +35,6 @@ export async function createMember(_prev: unknown, formData: FormData) {
         roleId: roleId || null,
       },
     });
-    await logActivity("CREATED_MEMBER", `Created member: ${name} (${email})`);
     revalidatePath("/members");
     return { success: true };
   } catch (e: unknown) {
@@ -70,7 +69,6 @@ export async function updateMember(_prev: unknown, formData: FormData) {
 
   try {
     await db.user.update({ where: { id }, data });
-    await logActivity("UPDATED_MEMBER", `Updated member: ${name}`);
     revalidatePath("/members");
     return { success: true };
   } catch (e: unknown) {
@@ -86,7 +84,6 @@ export async function deleteMember(id: string) {
   if (user?.isBoss) throw new Error("Cannot delete Boss account");
 
   await db.user.delete({ where: { id } });
-  await logActivity("DELETED_MEMBER", `Deleted member: ${user?.name}`);
   revalidatePath("/members");
 }
 
@@ -111,6 +108,14 @@ export async function getMemberDailySummary(memberId: string) {
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+  const allowedPlatforms = (member.role?.permissions || [])
+    .filter((p) => p.startsWith("post_"))
+    .map((p) => p.replace("post_", ""));
+
   const [
     scriptsWrittenToday,
     videosDoneToday,
@@ -118,6 +123,15 @@ export async function getMemberDailySummary(memberId: string) {
     pendingScripts,
     pendingPlatformTasks,
     activityToday,
+    // 30-day history for daily breakdown
+    scriptsLast30Days,
+    videosLast30Days,
+    postsLast30Days,
+    // All-time totals for completed vs assigned
+    allTimeScriptsWritten,
+    allTimeVideosAssigned,
+    allTimeVideosCreated,
+    allTimeTasksPosted,
   ] = await Promise.all([
     db.script.findMany({
       where: {
@@ -174,10 +188,16 @@ export async function getMemberDailySummary(memberId: string) {
       },
       orderBy: { createdAt: "desc" },
     }),
+    // Pending platform tasks: either assigned directly or matching their platform permissions
     db.platformTask.findMany({
       where: {
-        assignedToId: memberId,
         status: "PENDING",
+        OR: [
+          { assignedToId: memberId },
+          ...(allowedPlatforms.length > 0
+            ? [{ channelPlatform: { platformName: { in: allowedPlatforms } } }]
+            : []),
+        ],
       },
       include: {
         channelPlatform: {
@@ -203,11 +223,86 @@ export async function getMemberDailySummary(memberId: string) {
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
+    // 30 days history
+    db.script.findMany({
+      where: {
+        writerId: memberId,
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: { createdAt: true },
+    }),
+    db.video.findMany({
+      where: {
+        videoMakerId: memberId,
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: { createdAt: true },
+    }),
+    db.platformTask.findMany({
+      where: {
+        assignedToId: memberId,
+        status: "POSTED",
+        postedAt: { gte: thirtyDaysAgo },
+      },
+      select: { postedAt: true },
+    }),
+    // All-time counts
+    db.script.count({ where: { writerId: memberId } }),
+    db.script.count({ where: { videoMakerId: memberId } }),
+    db.video.count({ where: { videoMakerId: memberId } }),
+    db.platformTask.count({ where: { assignedToId: memberId, status: "POSTED" } }),
   ]);
+
+  // Build daily breakdown map for last 30 days
+  const dailyBreakdownMap: Record<
+    string,
+    { date: string; label: string; scripts: number; videos: number; posts: number; total: number }
+  > = {};
+
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split("T")[0];
+    const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    dailyBreakdownMap[key] = { date: key, label, scripts: 0, videos: 0, posts: 0, total: 0 };
+  }
+
+  scriptsLast30Days.forEach((s) => {
+    const key = new Date(s.createdAt).toISOString().split("T")[0];
+    if (dailyBreakdownMap[key]) {
+      dailyBreakdownMap[key].scripts += 1;
+      dailyBreakdownMap[key].total += 1;
+    }
+  });
+
+  videosLast30Days.forEach((v) => {
+    const key = new Date(v.createdAt).toISOString().split("T")[0];
+    if (dailyBreakdownMap[key]) {
+      dailyBreakdownMap[key].videos += 1;
+      dailyBreakdownMap[key].total += 1;
+    }
+  });
+
+  postsLast30Days.forEach((p) => {
+    if (p.postedAt) {
+      const key = new Date(p.postedAt).toISOString().split("T")[0];
+      if (dailyBreakdownMap[key]) {
+        dailyBreakdownMap[key].posts += 1;
+        dailyBreakdownMap[key].total += 1;
+      }
+    }
+  });
+
+  const dailyBreakdown = Object.values(dailyBreakdownMap);
 
   const totalDoneToday =
     scriptsWrittenToday.length + videosDoneToday.length + platformTasksPostedToday.length;
   const pendingTasksCount = pendingScripts.length + pendingPlatformTasks.length;
+
+  const totalAssignedAllTime =
+    allTimeScriptsWritten + allTimeVideosAssigned + (allTimeTasksPosted + pendingPlatformTasks.length);
+  const totalCompletedAllTime =
+    allTimeScriptsWritten + allTimeVideosCreated + allTimeTasksPosted;
 
   return {
     member: {
@@ -224,6 +319,16 @@ export async function getMemberDailySummary(memberId: string) {
       totalDoneToday,
       pendingTasksCount,
     },
+    overviewStats: {
+      totalAssigned: totalAssignedAllTime,
+      totalCompleted: totalCompletedAllTime,
+      pendingRemaining: pendingTasksCount,
+      completionRate:
+        totalAssignedAllTime > 0
+          ? Math.round((totalCompletedAllTime / totalAssignedAllTime) * 100)
+          : 100,
+    },
+    dailyBreakdown,
     scriptsWrittenToday: scriptsWrittenToday.map((s) => ({
       id: s.id,
       title: s.title,

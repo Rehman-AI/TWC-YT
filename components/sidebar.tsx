@@ -98,10 +98,10 @@ export function Sidebar({ session }: { session: SessionUser }) {
       <div className="p-3 border-t border-white/[0.06] flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#e8227a] to-[#8b5cf6] flex items-center justify-center text-[11px] font-semibold text-white flex-none">
-            {session.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+            {(session.isBoss ? "Sami" : session.name).split(" ").map((n) => n[0]).join("").slice(0, 2)}
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-medium text-white truncate">{session.name}</div>
+            <div className="text-xs font-medium text-white truncate">{session.isBoss ? "Sami" : session.name}</div>
             <div className="text-[11px] text-zinc-500">{session.isBoss ? "Boss" : "Member"}</div>
           </div>
         </div>
