@@ -83,8 +83,33 @@ export async function deleteMember(id: string) {
   const user = await db.user.findUnique({ where: { id } });
   if (user?.isBoss) throw new Error("Cannot delete Boss account");
 
-  await db.user.delete({ where: { id } });
+  await db.$transaction(async (tx) => {
+    // 1. Delete associated activity logs
+    await tx.activityLog.deleteMany({ where: { userId: id } });
+
+    // 2. Unassign any pending scripts or tasks assigned to this user
+    await tx.script.updateMany({
+      where: { videoMakerId: id },
+      data: { videoMakerId: null },
+    });
+    await tx.platformTask.updateMany({
+      where: { assignedToId: id },
+      data: { assignedToId: null },
+    });
+    await tx.platformTask.updateMany({
+      where: { postedById: id },
+      data: { postedById: null },
+    });
+
+    // 3. Delete the user
+    await tx.user.delete({ where: { id } });
+  });
+
   revalidatePath("/members");
+  revalidatePath("/dashboard");
+  revalidatePath("/activity");
+  revalidatePath("/videos");
+  revalidatePath("/platform-tasks");
 }
 
 export async function getMemberDailySummary(memberId: string) {
